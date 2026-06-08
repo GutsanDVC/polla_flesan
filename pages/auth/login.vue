@@ -30,6 +30,19 @@ definePageMeta({ layout: 'default' });
 const config = useRuntimeConfig();
 const appName = config.public.appName;
 
+const auth = useAuthStore();
+
+if (!auth.user && !auth.loading) {
+  await auth.fetchMe();
+}
+if (auth.isApproved) {
+  await navigateTo('/groups');
+} else if (auth.isPending) {
+  await navigateTo('/auth/pending');
+} else if (auth.isBlocked) {
+  await navigateTo('/auth/blocked');
+}
+
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -37,7 +50,7 @@ function login() {
   loading.value = true;
   errorMessage.value = '';
   if (import.meta.client) {
-    window.location.href = '/api/auth/google';
+    window.location.href = '/';
   }
 }
 </script>
