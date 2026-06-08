@@ -43,4 +43,12 @@ const auth = useAuthStore();
 if (!auth.user && !auth.loading) {
   await auth.fetchMe();
 }
+
+if (auth.isApproved) {
+  await navigateTo('/groups');
+} else if (auth.isPending) {
+  await navigateTo('/auth/pending');
+} else if (auth.isBlocked) {
+  await navigateTo('/auth/blocked');
+}
 </script>
