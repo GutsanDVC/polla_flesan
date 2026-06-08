@@ -13,7 +13,7 @@ export const dbClient = new Pool({
   max: 20,
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 5000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 dbClient.on('connect', (client) => {
