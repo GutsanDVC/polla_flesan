@@ -24,11 +24,14 @@ export default defineEventHandler(async (event) => {
   }
   const { code, state } = parsed.data;
 
-  const storedHash = getCookie(event, 'oauth_state');
+  // Read state hash from nuxt-auth-utils session (set in google.get.ts)
+  const session = await getUserSession(event);
+  const storedHash = (session as any)?.oauthState as string | undefined;
   if (!storedHash || !verifyStateHash(state, storedHash, stateSecret)) {
     throw createError({ statusCode: 400, statusMessage: 'Estado OAuth inválido' });
   }
-  deleteCookie(event, 'oauth_state', { path: '/' });
+  // Clear the oauthState key from session before setting full user session
+  await replaceUserSession(event, { ...session, oauthState: undefined });
 
   const { access_token } = await exchangeCodeForToken(code, redirectUri, clientId, clientSecret);
   const profile = await fetchGoogleProfile(access_token);

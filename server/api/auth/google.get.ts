@@ -15,13 +15,17 @@ export default defineEventHandler(async (event) => {
   const state = generateState();
   const stateHash = hashState(state, secret);
 
-  setCookie(event, 'oauth_state', stateHash, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 10,
-    path: '/',
-  });
+  // OLD: separate cookie (fails on Vercel - cookie lost in redirect)
+  // setCookie(event, 'oauth_state', stateHash, {
+  //   httpOnly: true,
+  //   sameSite: 'lax',
+  //   secure: process.env.NODE_ENV === 'production',
+  //   maxAge: 60 * 10,
+  //   path: '/',
+  // });
+
+  // NEW: store state in nuxt-auth-utils session (survives Vercel redirects)
+  await setUserSession(event, { oauthState: stateHash });
 
   const redirectUri = config.google.redirectUri;
   const authUrl = buildAuthorizationUrl(state, redirectUri, clientId);
