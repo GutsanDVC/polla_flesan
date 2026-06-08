@@ -1,0 +1,14 @@
+[Unit]
+Description=Polla Flesan DVC
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/polla-flesan
+ExecStart=/usr/bin/node /var/www/polla-flesan/.output/server/index.mjs
+Restart=on-failure
+EnvironmentFile=/etc/polla-flesan/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Nuxt build
+.nuxt/
+.output/
+dist/
+
+# Environment variables (contains secrets!)
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test & Coverage
+coverage/
+.playwright/
+
+# IDE
+.vscode/
+.idea/
+
+# Accidental files
+nul
