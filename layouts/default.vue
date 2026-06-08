@@ -11,6 +11,8 @@
             <NuxtLink to="/groups" class="hover:text-green-200 transition">Fase de Grupos</NuxtLink>
             <NuxtLink to="/bracket" class="hover:text-green-200 transition">Eliminatorias</NuxtLink>
             <NuxtLink to="/leaderboard" class="hover:text-green-200 transition">Clasificación</NuxtLink>
+            <NuxtLink to="/scores" class="hover:text-green-200 transition">Mis Puntajes</NuxtLink>
+            <NuxtLink to="/scores-rules" class="hover:text-green-200 transition">Reglas</NuxtLink>
             <NuxtLink v-if="auth.isAdmin" to="/admin" class="bg-yellow-500 px-3 py-1 rounded text-sm hover:bg-yellow-600 transition">Admin</NuxtLink>
           </div>
 
@@ -37,6 +39,8 @@
           <NuxtLink to="/groups" class="block py-2 hover:text-green-200">Fase de Grupos</NuxtLink>
           <NuxtLink to="/bracket" class="block py-2 hover:text-green-200">Eliminatorias</NuxtLink>
           <NuxtLink to="/leaderboard" class="block py-2 hover:text-green-200">Clasificación</NuxtLink>
+          <NuxtLink to="/scores" class="block py-2 hover:text-green-200">Mis Puntajes</NuxtLink>
+          <NuxtLink to="/scores-rules" class="block py-2 hover:text-green-200">Reglas</NuxtLink>
           <NuxtLink v-if="auth.isAdmin" to="/admin" class="block py-2 text-yellow-300">Admin</NuxtLink>
           <button @click="auth.logout" class="block py-2 text-left w-full">Cerrar sesión</button>
         </div>

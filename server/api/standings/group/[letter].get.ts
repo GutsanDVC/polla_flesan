@@ -2,6 +2,7 @@ import { PredictionRepository } from '~~/server/repositories/PredictionRepositor
 import { MatchRepository } from '~~/server/repositories/MatchRepository';
 import { PredictionService } from '~~/server/services/PredictionService';
 import { requireApproved } from '~~/server/utils/auth';
+import type { StandingEntry } from '~~/server/services/PredictionService';
 
 export default defineEventHandler(async (event) => {
   const user = requireApproved(event);
@@ -24,12 +25,14 @@ export default defineEventHandler(async (event) => {
     groupMatches.map((m) => m.id),
   );
 
-  const standing = predictionService.calculateStandings(groupMatches, userPredictions);
+  const standing: StandingEntry[] = predictionService.calculateStandings(groupMatches, userPredictions);
+  const realStanding: StandingEntry[] = predictionService.calculateRealStandings(groupMatches);
 
   return {
     group: groupLetter,
     matches: groupMatches,
     predictions: userPredictions,
     standing,
+    realStanding,
   };
 });

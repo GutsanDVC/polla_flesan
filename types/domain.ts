@@ -30,6 +30,16 @@ export const PHASE_LABELS: Record<Phase, string> = {
   FINAL: 'Final',
 };
 
+export const PHASE_MULTIPLIERS: Record<Phase, number> = {
+  GROUP: 1,
+  R32: 2,
+  R16: 4,
+  QUARTERS: 8,
+  SEMIS: 16,
+  THIRD_PLACE: 32,
+  FINAL: 64,
+};
+
 export type UserStatus = 'PENDING' | 'APPROVED' | 'BLOCKED';
 
 export type UserRole = 'USER' | 'ADMIN';

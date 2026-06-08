@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white rounded-lg shadow-md p-4">
-    <h2 class="text-lg font-semibold mb-4">Tabla de Posiciones Según tus Pronósticos</h2>
+    <h2 class="text-lg font-semibold mb-4">Tabla de Posiciones Real</h2>
 
     <table class="w-full text-sm">
       <thead>
@@ -28,7 +28,7 @@
         </tr>
         <tr v-if="standing.length === 0">
           <td colspan="5" class="py-4 text-center text-gray-500">
-            Ingresa predicciones para ver la tabla proyectada
+            Aún no hay partidos finalizados en este grupo
           </td>
         </tr>
       </tbody>

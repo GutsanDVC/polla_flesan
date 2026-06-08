@@ -137,7 +137,7 @@ describe('MatchSyncService', () => {
     expect(result.updated).toBe(1);
     expect(result.finished).toBe(1);
     expect(pointsCalcMock.processMatchResults).toHaveBeenCalledTimes(1);
-    expect(pointsCalcMock.processMatchResults).toHaveBeenCalledWith(103, 2, 1);
+    expect(pointsCalcMock.processMatchResults).toHaveBeenCalledWith(103, 2, 1, 'GROUP');
   });
 
   it('does not trigger point calculation for matches still scheduled', async () => {

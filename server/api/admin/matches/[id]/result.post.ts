@@ -20,11 +20,16 @@ export default defineEventHandler(async (event) => {
   const matchRepo = new MatchRepository();
   const pointsCalculator = new PointsCalculatorService();
 
+  const existingMatch = await matchRepo.getMatchById(matchId);
+  if (!existingMatch) {
+    throw createError({ statusCode: 404, statusMessage: 'Partido no encontrado' });
+  }
+
   const match = await matchRepo.setMatchResult(matchId, body.homeScore, body.awayScore);
   if (!match) {
     throw createError({ statusCode: 404, statusMessage: 'Partido no encontrado' });
   }
-  await pointsCalculator.processMatchResults(matchId, body.homeScore, body.awayScore);
+  await pointsCalculator.processMatchResults(matchId, body.homeScore, body.awayScore, existingMatch.phase);
 
   return { ok: true, message: 'Resultado actualizado y puntos calculados' };
 });

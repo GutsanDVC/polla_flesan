@@ -37,9 +37,10 @@ describe('PredictionService - calculateStandings', () => {
 
     const standing = service.calculateStandings(matches, predictions);
 
-    expect(standing[0]).toBe('A');
-    expect(standing[1]).toBe('B');
-    expect(standing[2]).toBe('C');
+    expect(standing[0].name).toBe('A');
+    expect(standing[0].points).toBe(6);
+    expect(standing[1].name).toBe('B');
+    expect(standing[2].name).toBe('C');
   });
 
   it('should handle empty predictions', () => {
@@ -47,8 +48,8 @@ describe('PredictionService - calculateStandings', () => {
 
     const standing = service.calculateStandings(matches, []);
 
-    expect(standing).toContain('A');
-    expect(standing).toContain('B');
+    expect(standing.map(s => s.name)).toContain('A');
+    expect(standing.map(s => s.name)).toContain('B');
   });
 
   it('should handle ties by goal difference', () => {
@@ -57,7 +58,7 @@ describe('PredictionService - calculateStandings', () => {
 
     const standing = service.calculateStandings(matches, predictions);
 
-    expect(standing).toEqual(['A', 'B']);
+    expect(standing.map(s => s.name)).toEqual(['A', 'B']);
   });
 
   it('should fall back to team_id when homeTeam/awayTeam are missing', () => {
@@ -77,7 +78,7 @@ describe('PredictionService - calculateStandings', () => {
     ];
 
     const standing = service.calculateStandings(matches, []);
-    expect(standing).toContain('#10');
-    expect(standing).toContain('#20');
+    expect(standing.map(s => s.name)).toContain('#10');
+    expect(standing.map(s => s.name)).toContain('#20');
   });
 });

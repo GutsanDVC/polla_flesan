@@ -3,10 +3,19 @@ import { MatchRepository } from '../repositories/MatchRepository';
 import { dbClient } from '../utils/db';
 import type { Match } from '~~/types/domain';
 
+export interface StandingEntry {
+  teamId: number;
+  name: string;
+  crest_url: string | null;
+  points: number;
+  gf: number;
+  gd: number;
+}
+
 interface MatchLite {
   id: number;
-  homeTeam: { id: number; name: string };
-  awayTeam: { id: number; name: string };
+  homeTeam: { id: number; name: string; crest_url: string | null };
+  awayTeam: { id: number; name: string; crest_url: string | null };
 }
 
 export class PredictionService {
@@ -73,7 +82,7 @@ export class PredictionService {
       userId,
       matchIds,
     );
-    const standing = this.calculateStandings(groupMatches, userPredictions);
+    const standing = this.calculateStandingsNames(groupMatches, userPredictions);
     await this.predictionRepo.upsertGroupPrediction(
       userId,
       group,
@@ -83,15 +92,15 @@ export class PredictionService {
     );
   }
 
-  calculateStandings(matches: Match[], predictions: any[]): string[] {
-    const stats: Record<number, { name: string; points: number; gd: number; gf: number }> = {};
+  calculateStandings(matches: Match[], predictions: any[]): StandingEntry[] {
+    const stats: Record<number, { teamId: number; name: string; crest_url: string | null; points: number; gd: number; gf: number }> = {};
 
     for (const m of matches) {
       if (!stats[m.home_team_id]) {
-        stats[m.home_team_id] = { name: m.homeTeam?.name ?? `#${m.home_team_id}`, points: 0, gd: 0, gf: 0 };
+        stats[m.home_team_id] = { teamId: m.home_team_id, name: m.homeTeam?.name ?? `#${m.home_team_id}`, crest_url: m.homeTeam?.crest_url ?? null, points: 0, gd: 0, gf: 0 };
       }
       if (!stats[m.away_team_id]) {
-        stats[m.away_team_id] = { name: m.awayTeam?.name ?? `#${m.away_team_id}`, points: 0, gd: 0, gf: 0 };
+        stats[m.away_team_id] = { teamId: m.away_team_id, name: m.awayTeam?.name ?? `#${m.away_team_id}`, crest_url: m.awayTeam?.crest_url ?? null, points: 0, gd: 0, gf: 0 };
       }
     }
 
@@ -119,7 +128,49 @@ export class PredictionService {
         if (b.points !== a.points) return b.points - a.points;
         if (b.gd !== a.gd) return b.gd - a.gd;
         return b.gf - a.gf;
-      })
-      .map((s) => s.name);
+      });
+  }
+
+  calculateStandingsNames(matches: Match[], predictions: any[]): string[] {
+    return this.calculateStandings(matches, predictions).map((s) => s.name);
+  }
+
+  calculateRealStandings(matches: Match[]): StandingEntry[] {
+    const stats: Record<number, { teamId: number; name: string; crest_url: string | null; points: number; gd: number; gf: number }> = {};
+
+    for (const m of matches) {
+      if (!stats[m.home_team_id]) {
+        stats[m.home_team_id] = { teamId: m.home_team_id, name: m.homeTeam?.name ?? `#${m.home_team_id}`, crest_url: m.homeTeam?.crest_url ?? null, points: 0, gd: 0, gf: 0 };
+      }
+      if (!stats[m.away_team_id]) {
+        stats[m.away_team_id] = { teamId: m.away_team_id, name: m.awayTeam?.name ?? `#${m.away_team_id}`, crest_url: m.awayTeam?.crest_url ?? null, points: 0, gd: 0, gf: 0 };
+      }
+    }
+
+    for (const m of matches) {
+      if (m.status !== 'FINISHED' || m.home_score === null || m.away_score === null) continue;
+
+      const home = stats[m.home_team_id];
+      const away = stats[m.away_team_id];
+      const hs = m.home_score;
+      const as = m.away_score;
+      home.gf += hs;
+      away.gf += as;
+      home.gd += hs - as;
+      away.gd += as - hs;
+      if (hs > as) home.points += 3;
+      else if (as > hs) away.points += 3;
+      else {
+        home.points += 1;
+        away.points += 1;
+      }
+    }
+
+    return Object.values(stats)
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.gd !== a.gd) return b.gd - a.gd;
+        return b.gf - a.gf;
+      });
   }
 }

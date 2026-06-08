@@ -1,5 +1,7 @@
 import { PredictionRepository } from '../repositories/PredictionRepository';
 import { MatchRepository } from '../repositories/MatchRepository';
+import type { Phase } from '../../types/domain';
+import { PHASE_MULTIPLIERS } from '../../types/domain';
 
 export class PointsCalculatorService {
   calculatePointsForMatch(
@@ -7,35 +9,25 @@ export class PointsCalculatorService {
     awayReal: number,
     homePred: number,
     awayPred: number,
+    phase: Phase,
   ): number {
-    let points = 0;
-
     const isExactMatch = homeReal === homePred && awayReal === awayPred;
     const realWinner = homeReal > awayReal ? 'HOME' : awayReal > homeReal ? 'AWAY' : 'DRAW';
     const predWinner = homePred > awayPred ? 'HOME' : awayPred > homePred ? 'AWAY' : 'DRAW';
     const isWinnerMatch = realWinner === predWinner;
 
+    let basePoints = 0;
     if (isExactMatch) {
-      points += 10;
+      basePoints = 10;
     } else if (isWinnerMatch) {
-      points += 5;
+      basePoints = 5;
     }
 
-    const totalGolesReal = homeReal + awayReal;
-    const totalGolesPred = homePred + awayPred;
-    if (totalGolesReal === totalGolesPred) {
-      points += 2;
-    }
-
-    if (!isExactMatch) {
-      if (homeReal === homePred) points += 1;
-      if (awayReal === awayPred) points += 1;
-    }
-
-    return points;
+    const multiplier = PHASE_MULTIPLIERS[phase] ?? 1;
+    return basePoints * multiplier;
   }
 
-  async processMatchResults(matchId: number, homeRealScore: number, awayRealScore: number) {
+  async processMatchResults(matchId: number, homeRealScore: number, awayRealScore: number, phase: Phase) {
     const predictionRepo = new PredictionRepository();
     const predictions = await predictionRepo.getPredictionsByMatch(matchId);
 
@@ -45,6 +37,7 @@ export class PointsCalculatorService {
         awayRealScore,
         pred.home_score_pred,
         pred.away_score_pred,
+        phase,
       );
       await predictionRepo.updatePredictionPoints(pred.id, calculatedPoints);
     }

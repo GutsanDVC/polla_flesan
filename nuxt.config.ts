@@ -26,7 +26,7 @@ export default defineNuxtConfig({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback',
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://mundial2026.grupoflesan.com/api/auth/google/callback',
     },
     oauthStateSecret: process.env.OAUTH_STATE_SECRET || process.env.AUTH_SECRET,
     footballData: {

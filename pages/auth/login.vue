@@ -50,7 +50,20 @@ function login() {
   loading.value = true;
   errorMessage.value = '';
   if (import.meta.client) {
-    window.location.href = '/';
+    window.location.href = '/api/auth/google';
   }
 }
+
+watch(() => auth.user, () => {
+  if (auth.user) {
+    if (auth.isApproved) {
+      navigateTo('/groups');
+    } else if (auth.isPending) {
+      navigateTo('/auth/pending');
+    } else if (auth.isBlocked) {
+      navigateTo('/auth/blocked');
+    }
+  }
+});
+
 </script>

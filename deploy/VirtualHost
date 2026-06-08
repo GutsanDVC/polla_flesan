@@ -1,0 +1,43 @@
+<VirtualHost *:80>
+    ServerName qaportalfinanzas.grupoflesan.com
+    ServerAdmin desarrollo@flesan.com
+
+    # Redirección automática de HTTP a HTTPS
+    redirect permanent / https://qaportalfinanzas.grupoflesan.com/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName qaportalfinanzas.grupoflesan.com
+    ServerAdmin desarrollo@flesan.com
+    DocumentRoot /var/www/flesanone/
+
+
+    <Directory /var/www/flesanone/>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+
+    # Configuración de Logs
+    ErrorLog ${APACHE_LOG_DIR}/flesanone_error.log
+    CustomLog ${APACHE_LOG_DIR}/flesanone_access.log combined
+
+    # --- Configuración del Proxy Inverso ---
+    ProxyPreserveHost On
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+    ProxyPass / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+
+    # Soporte para WebSockets (si usas HMR o funciones en tiempo real)
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} websocket [NC]
+    RewriteCond %{HTTP:Connection} upgrade [NC]
+    RewriteRule .* ws://127.0.0.1:3000%{REQUEST_URI} [P,L]
+
+    SSLEngine on
+    SSLCertificateFile /var/www/ssl/grupo_flesan/wildcard_grupoflesan_com.crt
+    SSLCertificateKeyFile /var/www/ssl/grupo_flesan/wildcard_grupoflesan_com.key
+    SSLCACertificateFile /var/www/ssl/grupo_flesan/DigiCertCA.crt
+</VirtualHost>

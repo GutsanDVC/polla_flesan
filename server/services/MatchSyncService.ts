@@ -77,6 +77,7 @@ export class MatchSyncService {
             mapped.id,
             mapped.home_score,
             mapped.away_score,
+            mapped.phase,
           );
           finished += 1;
         }

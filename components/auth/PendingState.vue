@@ -8,18 +8,8 @@
     <h2 class="text-xl font-semibold text-yellow-800">Esperando aprobación</h2>
     <p class="text-yellow-700">
       Hola <strong>{{ userName }}</strong>, tu cuenta fue creada pero aún no fue aprobada por el administrador.
-      Te avisaremos por email cuando puedas empezar a jugar.
+      Contactate con el area de Desarrollo para que puedas comenzar a jugar.
     </p>
-    <div class="text-sm text-yellow-600">
-      Próxima verificación automática en {{ countdown }}s
-    </div>
-    <button
-      type="button"
-      class="text-sm text-yellow-700 underline hover:text-yellow-900"
-      @click="checkNow"
-    >
-      Verificar ahora
-    </button>
     <div>
       <button
         type="button"

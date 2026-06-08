@@ -45,14 +45,6 @@
         <div v-if="match.status === 'FINISHED'" class="mt-2 text-center text-sm text-gray-500">
           Resultado: {{ match.home_score }} - {{ match.away_score }}
         </div>
-
-        <button
-          v-if="match.status !== 'FINISHED'"
-          @click="saveMatchPrediction(match.id)"
-          class="mt-2 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition text-sm"
-        >
-          Guardar
-        </button>
       </div>
 
       <div v-if="matches.length === 0" class="text-center text-gray-500 py-4">
@@ -68,10 +60,6 @@ import type { Match, MatchPrediction } from '~~/types/domain';
 const props = defineProps<{
   matches: Match[];
   predictions: MatchPrediction[];
-}>();
-
-const emit = defineEmits<{
-  (e: 'save-prediction', matchId: number, home: number, away: number): void;
 }>();
 
 const localPredictions = ref<Record<number, { home: number; away: number }>>({});
@@ -113,13 +101,6 @@ function updatePrediction(matchId: number, side: 'home' | 'away', event: Event) 
   localPredictions.value[matchId][side] = value;
 }
 
-function saveMatchPrediction(matchId: number) {
-  const pred = localPredictions.value[matchId];
-  if (pred) {
-    emit('save-prediction', matchId, pred.home, pred.away);
-  }
-}
-
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -128,4 +109,6 @@ function formatDate(dateStr: string) {
     minute: '2-digit',
   });
 }
+
+defineExpose({ localPredictions });
 </script>
