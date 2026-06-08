@@ -36,9 +36,11 @@ export class MatchSyncService {
     }
 
     const fdTeams = collectTeams(fdMatches);
+    const teamIds = new Set<number>();
     for (const t of fdTeams) {
       try {
         await this.teamRepo.upsert(mapTeam(t));
+        teamIds.add(t.id);
       } catch (err) {
         errors.push(`team ${t.id} (${t.name}): ${(err as Error).message}`);
       }
@@ -47,6 +49,11 @@ export class MatchSyncService {
     for (const fd of fdMatches) {
       const mapped = mapMatch(fd);
       if (!mapped) continue;
+
+      if (!teamIds.has(mapped.home_team_id) || !teamIds.has(mapped.away_team_id)) {
+        errors.push(`match ${mapped.id}: skipped (team not in DB)`);
+        continue;
+      }
 
       try {
         const wasFinished =

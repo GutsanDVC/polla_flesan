@@ -48,6 +48,8 @@ export function mapMatch(m: FDMatch): MappedMatch | null {
   const phase = STAGE_MAP[m.stage];
   if (!phase) return null;
 
+  if (!m.homeTeam?.id || !m.awayTeam?.id) return null;
+
   const status = STATUS_MAP[m.status] ?? 'SCHEDULED';
   const group = phase === 'GROUP' ? parseGroupLetter(m.group) : null;
 
@@ -108,8 +110,8 @@ export async function fetchWorldCupMatches(
 export function collectTeams(matches: FDMatch[]): FDTeam[] {
   const map = new Map<number, FDTeam>();
   for (const m of matches) {
-    if (!map.has(m.homeTeam.id)) map.set(m.homeTeam.id, m.homeTeam);
-    if (!map.has(m.awayTeam.id)) map.set(m.awayTeam.id, m.awayTeam);
+    if (m.homeTeam?.id) map.set(m.homeTeam.id, m.homeTeam);
+    if (m.awayTeam?.id) map.set(m.awayTeam.id, m.awayTeam);
   }
   return [...map.values()];
 }
