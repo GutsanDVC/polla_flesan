@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', {
         const me = await $fetch<SessionUser>('/api/auth/me');
         this.user = me;
       } catch (err: any) {
-        if (err?.statusCode === 401 || err?.response?.status === 401) {
+        if (err?.statusCode === 401 || err?.statusCode === 404 || err?.response?.status === 401 || err?.response?.status === 404) {
           this.user = null;
         } else {
           throw err;

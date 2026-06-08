@@ -64,6 +64,6 @@ function toggleMobileMenu() {
 }
 
 if (import.meta.client && !auth.user && !auth.loading) {
-  await auth.fetchMe();
+  auth.fetchMe().catch(() => {});
 }
 </script>

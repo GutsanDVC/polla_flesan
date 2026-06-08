@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
   );
   const row = result.rows[0];
   if (!row) {
-    throw createError({ statusCode: 404, statusMessage: 'Usuario no encontrado' });
+    await clearUserSession(event);
+    throw createError({ statusCode: 401, statusMessage: 'Sesión inválida' });
   }
 
   return {
