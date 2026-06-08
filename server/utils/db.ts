@@ -8,14 +8,14 @@ if (!connectionString) {
   console.error("ADVERTENCIA: DATABASE_URL no está definida.");
 }
 
+const needsSsl = connectionString?.includes('sslmode=require') || connectionString?.includes('sslmode=verify-ca');
+
 export const dbClient = new Pool({
   connectionString,
   max: 20,
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 5000,
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: true
-  } : false,
+  ssl: needsSsl ? { rejectUnauthorized: false } : false,
 });
 
 dbClient.on('connect', (client) => {
