@@ -129,9 +129,9 @@ export class PredictionRepository {
     pos3: string,
   ) {
     const query = `
-      INSERT INTO group_predictions (user_id, group, pos_1_team, pos_2_team, pos_3_team, updated_at)
+      INSERT INTO group_predictions (user_id, "group", pos_1_team, pos_2_team, pos_3_team, updated_at)
       VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (user_id, group)
+      ON CONFLICT (user_id, "group")
       DO UPDATE SET
         pos_1_team = EXCLUDED.pos_1_team,
         pos_2_team = EXCLUDED.pos_2_team,
