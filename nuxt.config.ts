@@ -17,6 +17,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    session: {
+      password: process.env.NUXT_SESSION_PASSWORD || '',
+    },
     auth: {
       secret: process.env.AUTH_SECRET,
     },
