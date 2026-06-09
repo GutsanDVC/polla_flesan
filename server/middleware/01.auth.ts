@@ -1,4 +1,4 @@
-import { dbClient } from '../utils/db';
+import { dbClient, SCHEMA } from '../utils/db';
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event);
@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const result = await dbClient.query(
-      'SELECT id, email, full_name, avatar_url, role, status FROM users WHERE id = $1',
+      `SELECT id, email, full_name, avatar_url, role, status FROM ${SCHEMA}.users WHERE id = $1`,
       [session.user.id],
     );
     const row = result.rows[0];

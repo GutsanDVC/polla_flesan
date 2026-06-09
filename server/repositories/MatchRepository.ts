@@ -1,4 +1,4 @@
-import { dbClient } from '../utils/db';
+import { dbClient, SCHEMA } from '../utils/db';
 import type { Match, Phase, Team } from '~~/types/domain';
 
 interface MatchRow extends Match {
@@ -54,9 +54,9 @@ const SELECT_WITH_TEAMS = `
     m.home_team_id, m.away_team_id, m.home_score, m.away_score, m.last_synced_at,
     ht.name  AS home_team_name,  ht.short_name AS home_team_short,  ht.tla AS home_team_tla,  ht.crest_url AS home_team_crest,  ht.country_code AS home_team_country,
     at.name  AS away_team_name,  at.short_name AS away_team_short,  at.tla AS away_team_tla,  at.crest_url AS away_team_crest,  at.country_code AS away_team_country
-  FROM matches m
-  JOIN teams ht ON ht.id = m.home_team_id
-  JOIN teams at ON at.id = m.away_team_id
+  FROM ${SCHEMA}.matches m
+  JOIN ${SCHEMA}.teams ht ON ht.id = m.home_team_id
+  JOIN ${SCHEMA}.teams at ON at.id = m.away_team_id
 `;
 
 export class MatchRepository {
@@ -96,20 +96,20 @@ export class MatchRepository {
 
   async getMinDateByPhase(phase: Phase): Promise<string | null> {
     const res = await dbClient.query(
-      `SELECT MIN(utc_date) AS min_date FROM matches WHERE phase = $1`,
+      `SELECT MIN(utc_date) AS min_date FROM ${SCHEMA}.matches WHERE phase = $1`,
       [phase],
     );
     return res.rows[0]?.min_date ?? null;
   }
 
   async getCount(): Promise<number> {
-    const res = await dbClient.query('SELECT COUNT(*)::int AS c FROM matches');
+    const res = await dbClient.query(`SELECT COUNT(*)::int AS c FROM ${SCHEMA}.matches`);
     return res.rows[0]?.c ?? 0;
   }
 
   async getFinishedIds(): Promise<number[]> {
     const res = await dbClient.query(
-      'SELECT id FROM matches WHERE status = $1 AND home_score IS NOT NULL AND away_score IS NOT NULL',
+      `SELECT id FROM ${SCHEMA}.matches WHERE status = $1 AND home_score IS NOT NULL AND away_score IS NOT NULL`,
       ['FINISHED'],
     );
     return res.rows.map((r) => r.id);
@@ -118,7 +118,7 @@ export class MatchRepository {
   async upsertMatch(match: Omit<Match, 'homeTeam' | 'awayTeam'>): Promise<number> {
     const res = await dbClient.query(
       `
-      INSERT INTO matches (
+      INSERT INTO ${SCHEMA}.matches (
         id, utc_date, phase, "group", matchday, status,
         home_team_id, away_team_id,
         home_score, away_score, last_synced_at
@@ -161,7 +161,7 @@ export class MatchRepository {
   ): Promise<Match | null> {
     const res = await dbClient.query(
       `
-      UPDATE matches
+      UPDATE ${SCHEMA}.matches
       SET
         home_score = $1,
         away_score = $2,

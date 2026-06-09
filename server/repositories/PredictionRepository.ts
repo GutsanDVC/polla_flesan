@@ -1,4 +1,4 @@
-import { dbClient } from '../utils/db';
+import { dbClient, SCHEMA } from '../utils/db';
 import type { MatchPredictionWithMatch, Team } from '~~/types/domain';
 
 interface PredictionRow extends Omit<MatchPredictionWithMatch, 'homeTeam' | 'awayTeam'> {
@@ -66,16 +66,16 @@ const SELECT_PREDICTION_WITH_MATCH = `
     ht.tla AS home_team_tla, ht.crest_url AS home_team_crest, ht.country_code AS home_team_country,
     at.name AS away_team_name, at.short_name AS away_team_short,
     at.tla AS away_team_tla, at.crest_url AS away_team_crest, at.country_code AS away_team_country
-  FROM match_predictions mp
-  JOIN matches m ON m.id = mp.match_id
-  JOIN teams ht ON ht.id = m.home_team_id
-  JOIN teams at ON at.id = m.away_team_id
+  FROM ${SCHEMA}.match_predictions mp
+  JOIN ${SCHEMA}.matches m ON m.id = mp.match_id
+  JOIN ${SCHEMA}.teams ht ON ht.id = m.home_team_id
+  JOIN ${SCHEMA}.teams at ON at.id = m.away_team_id
 `;
 
 export class PredictionRepository {
   async upsertMatchPrediction(userId: string, matchId: number, homeScore: number, awayScore: number) {
     const query = `
-      INSERT INTO match_predictions (user_id, match_id, home_score_pred, away_score_pred, updated_at)
+      INSERT INTO ${SCHEMA}.match_predictions (user_id, match_id, home_score_pred, away_score_pred, updated_at)
       VALUES ($1, $2, $3, $4, NOW())
       ON CONFLICT (user_id, match_id)
       DO UPDATE SET
@@ -98,7 +98,7 @@ export class PredictionRepository {
 
   async getPredictionByUserAndMatch(userId: string, matchId: number) {
     const res = await dbClient.query(
-      'SELECT * FROM match_predictions WHERE user_id = $1 AND match_id = $2',
+      `SELECT * FROM ${SCHEMA}.match_predictions WHERE user_id = $1 AND match_id = $2`,
       [userId, matchId],
     );
     return res.rows[0] ?? null;
@@ -106,7 +106,7 @@ export class PredictionRepository {
 
   async getPredictionsByMatch(matchId: number) {
     const res = await dbClient.query(
-      'SELECT * FROM match_predictions WHERE match_id = $1',
+      `SELECT * FROM ${SCHEMA}.match_predictions WHERE match_id = $1`,
       [matchId],
     );
     return res.rows;
@@ -115,7 +115,7 @@ export class PredictionRepository {
   async getPredictionsByUserAndMatches(userId: string, matchIds: number[]) {
     if (matchIds.length === 0) return [];
     const res = await dbClient.query(
-      'SELECT * FROM match_predictions WHERE user_id = $1 AND match_id = ANY($2)',
+      `SELECT * FROM ${SCHEMA}.match_predictions WHERE user_id = $1 AND match_id = ANY($2)`,
       [userId, matchIds],
     );
     return res.rows;
@@ -129,7 +129,7 @@ export class PredictionRepository {
     pos3: string,
   ) {
     const query = `
-      INSERT INTO group_predictions (user_id, "group", pos_1_team, pos_2_team, pos_3_team, updated_at)
+      INSERT INTO ${SCHEMA}.group_predictions (user_id, "group", pos_1_team, pos_2_team, pos_3_team, updated_at)
       VALUES ($1, $2, $3, $4, $5, NOW())
       ON CONFLICT (user_id, "group")
       DO UPDATE SET
@@ -145,7 +145,7 @@ export class PredictionRepository {
 
   async getGroupPredictionsByUser(userId: string) {
     const res = await dbClient.query(
-      'SELECT * FROM group_predictions WHERE user_id = $1 ORDER BY "group" ASC',
+      `SELECT * FROM ${SCHEMA}.group_predictions WHERE user_id = $1 ORDER BY "group" ASC`,
       [userId],
     );
     return res.rows;
@@ -153,7 +153,7 @@ export class PredictionRepository {
 
   async updatePredictionPoints(predictionId: string, points: number) {
     const res = await dbClient.query(
-      `UPDATE match_predictions
+      `UPDATE ${SCHEMA}.match_predictions
        SET calculated_points = $1, processed = TRUE
        WHERE id = $2
        RETURNING *`,

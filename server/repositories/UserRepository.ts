@@ -1,21 +1,21 @@
-import { dbClient } from '../utils/db';
+import { dbClient, SCHEMA } from '../utils/db';
 
 export class UserRepository {
   async getUserById(id: string) {
-    const query = 'SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM users WHERE id = $1';
+    const query = `SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM ${SCHEMA}.users WHERE id = $1`;
     const result = await dbClient.query(query, [id]);
     return result.rows[0] || null;
   }
 
   async getUserByEmail(email: string) {
-    const query = 'SELECT * FROM users WHERE email = $1';
+    const query = `SELECT * FROM ${SCHEMA}.users WHERE email = $1`;
     const result = await dbClient.query(query, [email]);
     return result.rows[0] || null;
   }
 
   async createUser(email: string, fullName: string, avatarUrl?: string) {
     const query = `
-      INSERT INTO users (email, full_name, avatar_url, status)
+      INSERT INTO ${SCHEMA}.users (email, full_name, avatar_url, status)
       VALUES ($1, $2, $3, 'PENDING')
       ON CONFLICT (email) DO UPDATE SET
         full_name = EXCLUDED.full_name,
@@ -27,26 +27,26 @@ export class UserRepository {
   }
 
   async updateUserStatus(userId: string, status: string) {
-    const query = 'UPDATE users SET status = $1 WHERE id = $2 RETURNING *';
+    const query = `UPDATE ${SCHEMA}.users SET status = $1 WHERE id = $2 RETURNING *`;
     const result = await dbClient.query(query, [status, userId]);
     return result.rows[0];
   }
 
   async getAllUsers() {
-    const query = 'SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM users ORDER BY created_at DESC';
+    const query = `SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM ${SCHEMA}.users ORDER BY created_at DESC`;
     const result = await dbClient.query(query);
     return result.rows;
   }
 
   async getApprovedUsers() {
-    const query = 'SELECT id, email, full_name, avatar_url, role, status FROM users WHERE status = \'APPROVED\' ORDER BY full_name ASC';
+    const query = `SELECT id, email, full_name, avatar_url, role, status FROM ${SCHEMA}.users WHERE status = 'APPROVED' ORDER BY full_name ASC`;
     const result = await dbClient.query(query);
     return result.rows;
   }
 
   async updatePaymentFields(userId: string, paymentStatus: string, paymentReceiptUrl?: string | null) {
     const query = `
-      UPDATE users
+      UPDATE ${SCHEMA}.users
       SET payment_status = $1, payment_receipt_url = $2, updated_at = CURRENT_TIMESTAMP
       WHERE id = $3
       RETURNING id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dbClient } from '../../../utils/db';
+import { dbClient, SCHEMA } from '../../../utils/db';
 import { exchangeCodeForToken, fetchGoogleProfile, verifyStateHash } from '../../../utils/google-oauth';
 
 const querySchema = z.object({
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const upsert = await dbClient.query(
-    `INSERT INTO users (email, full_name, avatar_url, role, status)
+    `INSERT INTO ${SCHEMA}.users (email, full_name, avatar_url, role, status)
      VALUES ($1, $2, $3, 'USER', 'PENDING')
      ON CONFLICT (email) DO UPDATE
        SET full_name = EXCLUDED.full_name,

@@ -1,10 +1,10 @@
-import { dbClient } from '../utils/db';
+import { dbClient, SCHEMA } from '../utils/db';
 import type { Team } from '~~/types/domain';
 
 export class TeamRepository {
   async upsert(team: Team): Promise<Team> {
     const query = `
-      INSERT INTO teams (id, name, short_name, tla, crest_url, country_code, updated_at)
+      INSERT INTO ${SCHEMA}.teams (id, name, short_name, tla, crest_url, country_code, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
@@ -29,7 +29,7 @@ export class TeamRepository {
 
   async getById(id: number): Promise<Team | null> {
     const res = await dbClient.query(
-      'SELECT id, name, short_name, tla, crest_url, country_code FROM teams WHERE id = $1',
+      `SELECT id, name, short_name, tla, crest_url, country_code FROM ${SCHEMA}.teams WHERE id = $1`,
       [id],
     );
     return res.rows[0] ?? null;
@@ -38,7 +38,7 @@ export class TeamRepository {
   async getByIds(ids: number[]): Promise<Team[]> {
     if (ids.length === 0) return [];
     const res = await dbClient.query(
-      'SELECT id, name, short_name, tla, crest_url, country_code FROM teams WHERE id = ANY($1)',
+      `SELECT id, name, short_name, tla, crest_url, country_code FROM ${SCHEMA}.teams WHERE id = ANY($1)`,
       [ids],
     );
     return res.rows;
@@ -46,7 +46,7 @@ export class TeamRepository {
 
   async getAll(): Promise<Team[]> {
     const res = await dbClient.query(
-      'SELECT id, name, short_name, tla, crest_url, country_code FROM teams ORDER BY name ASC',
+      `SELECT id, name, short_name, tla, crest_url, country_code FROM ${SCHEMA}.teams ORDER BY name ASC`,
     );
     return res.rows;
   }
