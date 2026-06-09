@@ -110,7 +110,9 @@ async function fetchGroupData() {
       predictions: MatchPrediction[];
       standing: StandingEntry[];
       realStanding: StandingEntry[];
-    }>(`/api/standings/group/${selectedGroup.value}`);
+    }>(`/api/standings/group/${selectedGroup.value}`, {
+      headers: { 'Cache-Control': 'no-cache' },
+    });
     groupMatches.value = data.matches;
     groupStanding.value = data.standing;
     realStanding.value = data.realStanding;

@@ -1,481 +1,596 @@
-# **Documentación Maestra: Plataforma de Apuestas \- FIFA World Cup 2026**
+# Documentación Maestra: Polla Flesan DVC — FIFA World Cup 2026
 
-Este documento constituye la especificación técnica y funcional definitiva para el desarrollo del MVP de la plataforma de apuestas recreativas. El sistema se construirá sobre una arquitectura limpia, modular y desacoplada, utilizando **NuxtJS** como framework fullstack y **PostgreSQL** (en Neon o Supabase) como motor de persistencia relacional.
+Documento técnico y funcional definitivo del MVP de la plataforma de quiniela recreativa para el Mundial 2026.
 
-## **1\. Resumen Ejecutivo y Objetivos del MVP**
+---
 
-El objetivo de este proyecto es construir una aplicación web ágil y altamente responsiva para realizar apuestas deportivas ("quiniela", "polla" o "prode") de manera cerrada y privada para el Mundial 2026\.
+## 1. Resumen Ejecutivo
 
-* **Foco del MVP:** Experiencia de usuario pulida en móviles, precisión absoluta en el cálculo automatizado de puntos y gestión estricta de bloqueos de apuestas basados en las fases del torneo.  
-* **Modelo Económico:** Recreativo. Las transacciones monetarias se manejan "offline" (fuera de la plataforma).  
-* **Despliegue:** Optimizado para la capa gratuita de **Vercel** (Nuxt Serverless Nitro Engine) y base de datos serverless PostgreSQL.
+Aplicación web para quiniela ("polla" / "prode") del Mundial FIFA 2026, diseñada para uso cerrado y privado entre participantes de la empresa.
 
-## **2\. Requerimientos del Sistema (360°)**
+| Aspecto | Detalle |
+|---------|---------|
+| **Framework** | Nuxt 3 (SSR + Nitro server) |
+| **Base de datos** | PostgreSQL (Supabase) |
+| **Estado** | Pinia |
+| **Auth** | Google OAuth + aprobación admin (nuxt-auth-utils) |
+| **Estilos** | Tailwind CSS |
+| **Sync de datos** | football-data.org API v4 |
+| **Tests** | Vitest (51 tests, 6 archivos) |
+| **Despliegue primario** | Servidor interno (Apache2 + PM2) — `mundial2026.grupoflesan.com` |
+| **Despliegue secundario** | Vercel (preview/testing) |
 
-### **2.1 Requerimientos Funcionales (RF)**
+### Modelo Económico
 
-* **RF-01: Autenticación por Invitación:** Registro e inicio de sesión exclusivo a través de Google OAuth. El Administrador debe pre-registrar el correo del usuario autorizado o aprobar solicitudes de inscripción pendientes en un panel administrativo simple.  
-* **RF-02: Gestión de Pronósticos de Fase de Grupos:**  
-  * Los usuarios deben ingresar marcadores para los 72 partidos de la fase de grupos.  
-  * **Cálculo Automático de Posiciones:** La aplicación calculará automáticamente en tiempo real las posiciones de cada uno de los 12 grupos (posiciones 1, 2, 3 y 4\) basándose exclusivamente en los 72 marcadores pronosticados por el usuario. Se implementará un algoritmo que aplique las reglas de desempate oficiales de la FIFA (puntos, diferencia de goles y goles anotados). El usuario visualizará su tabla proyectada inmediatamente sin necesidad de un ordenamiento manual (drag-and-drop), garantizando 100% de consistencia lógica.  
-  * **Bloqueo estricto:** 11 de Junio de 2026 (antes del partido inaugural). Ninguna predicción de fase de grupos puede ser modificada posterior a este hito.  
-* **RF-03: Gestión Dinámica de Pronósticos de Fase Eliminatoria (Fase por Fase):**  
-  * La predicción de las eliminatorias no se bloquea en su totalidad al inicio del torneo. En su lugar, se habilita de forma secuencial fase por fase (Dieciseisavos, Octavos, Cuartos, Semifinales, Final).  
-  * Una vez que la fase previa ha concluido y el Administrador confirma los emparejamientos oficiales en la base de datos, se "abre" la ventana de predicción para la siguiente fase.  
-  * **Bloqueo dinámico por fase:** Las apuestas de una fase eliminatoria específica (por ejemplo, Cuartos de Final) se bloquean de forma estricta en el instante en que inicia el primer partido programado de esa fase específica. Esto permite a los usuarios corregir su camino y seguir sumando puntos basándose en los equipos reales que avanzaron, manteniendo alta la retención de jugadores.  
-* **RF-04: Predicciones Especiales:** Formulario de selección única para Goleador (Bota de Oro), Guante de Oro y MVP del torneo. Bloqueo idéntico al de la fase de grupos.  
-* **RF-05: Motor de Cálculo de Puntos (Core Engine):**  
-  * Automatización del procesamiento de puntajes en base al ingreso de resultados reales por parte del administrador.  
-  * Aplicación estricta de la matriz de puntos (ver sección de negocio).  
-* **RF-06: Tabla de Clasificación en Tiempo Real (Leaderboard):**  
-  * Visualización del ranking general de amigos ordenados por puntaje descendente.  
-  * Detalle expandible para auditar las predicciones de otros usuarios una vez que el tiempo límite de edición haya expirado (transparencia del juego).
+Recreativo. Cada participante aporta $10.000 CLP al pozo. Premios: 1er lugar 50%, 2do lugar 30%, 3er lugar 20%. Las transacciones se manejan offline.
 
-### **2.2 Requerimientos No Funcionales (RNF)**
+---
 
-* **RNF-01: Seguridad en Transiciones de Fase:** El servidor debe validar el timestamp de cada petición de guardado contra la hora oficial de bloqueo de la fase correspondiente, impidiendo inyecciones vía API fuera de plazo.  
-* **RNF-02: Escalabilidad y Rendimiento:** Consultas optimizadas con SQL crudo para soportar ráfagas de lectura al finalizar los partidos del mundial.  
-* **RNF-03: Arquitectura Limpia:** Separación rígida en tres capas de backend (Rutas Nitro \-\> Servicios de Negocio \-\> Repositorio SQL nativo) para facilitar mantenimiento y pruebas.  
-* **RNF-04: Diseño Móvil Primero (Mobile First):** Interfaz altamente responsiva, emulando una aplicación nativa, ideal para su uso desde smartphones.
+## 2. Requerimientos Funcionales
 
-## **3\. Alcance y Exclusiones**
+### RF-01: Autenticación y Gestión de Usuarios
 
-* **En el Alcance (In-Scope):**  
-  * Panel de administración básico para ingresar resultados oficiales de partidos, actualizar llaves reales para fases eliminatorias y ganadores de premios individuales.  
-  * Flujo de apuestas completo de grupos y bracket de eliminatorias dinámico por fases.  
-  * Sistema de notificaciones/alertas visuales dentro de la interfaz para recordar los bloqueos de apuestas de la fase activa.  
-* **Fuera del Alcance (Out-of-Scope):**  
-  * Procesamiento de pagos integrados (Stripe, PayPal, criptomonedas).  
-  * Chats en vivo o muros de comentarios integrados (se asume coordinación por apps de mensajería externas).  
-  * Generación de estadísticas avanzadas de rendimiento de jugadores.
+- Registro e inicio de sesión exclusivo vía **Google OAuth**.
+- Flujo: Google redirect → callback → sesión en cookie cifrada (`nuxt-auth-utils`).
+- El middleware server-side (`server/middleware/01.auth.ts`) hidrata el usuario desde la DB en cada request.
+- Estados de usuario: `PENDING` (esperando aprobación), `APPROVED` (activo), `BLOCKED` (bloqueado).
+- Roles: `USER`, `ADMIN`.
+- Panel admin para aprobar/rechazar usuarios y gestionar estados.
 
-## **4\. Diseño de Base de Datos y Estrategia de Persistencia (Supabase)**
+### RF-02: Predicciones de Fase de Grupos
 
-Para garantizar consistencia y rendimiento óptimo en las consultas SQL crudas, se propone el siguiente diseño relacional estructurado en 3ª Forma Normal:
+- 72 partidos de fase de grupos (12 grupos × 6 partidos).
+- Ingreso individual o **bulk** (guardar todos los predicciones de un grupo de una vez).
+- **Tabla proyectada**: se calcula automáticamente en tiempo real basándose en las predicciones del usuario (puntos FIFA: 3pts victoria, 1pt empate, desempate por diferencia de goles y goles a favor).
+- **Tabla real**: muestra las posiciones basadas en resultados reales de partidos finalizados.
+- Layout lado a lado en desktop: partidos a la izquierda, standings a la derecha.
+- **Bloqueo**: 11 de junio de 2026 (antes del partido inaugural). Variable configurable: `GROUP_PHASE_LOCK_DATE`.
 
-### **4.1 Evaluación de Infraestructura de Datos para Despliegue Rápido**
+### RF-03: Predicciones de Fase Eliminatoria
 
-* **SQLite local en Nuxt:** **Descartado**. Al desplegar en Vercel, el sistema de archivos del contenedor de funciones serverless es efímero y de solo lectura. SQLite perdería todos los datos cada vez que la función serverless se reinicie (cold start).  
-* **Firebase (Firestore):** **Descartado**. No es relacional. El modelo de datos de un mundial (partidos, predicciones, emparejamientos y usuarios) requiere transaccionalidad, joins de bases de datos y agregaciones complejas (como resolver desempates FIFA). Firebase requeriría reescribir toda la lógica de repositorios y no admite SQL nativo.  
-* **Supabase (PostgreSQL):** **Seleccionado (Solución Óptima)**. Ofrece una base de datos PostgreSQL real y persistente con una capa gratuita excelente. Permite la conexión directa por TCP/pooling y es 100% compatible con consultas SQL nativas sin ORM. Su aprovisionamiento toma menos de 2 minutos, lo que la convierte en la opción de implementación más rápida y estable para este proyecto.
+- Las eliminatorias se habilitan fase por fase (R32 → R16 → Cuartos → Semifinales → Final).
+- **Bloqueo dinámico**: se bloquea al iniciar el primer partido de cada fase.
+- Página placeholder implementada (`/bracket`); habilitación secuencial pendiente de emparejamientos reales.
 
-### **4.2 Esquema de Base de Datos (PostgreSQL)**
+### RF-04: Motor de Cálculo de Puntos
 
-\-- 1\. Tabla de Usuarios  
-CREATE TABLE users (  
-    id UUID PRIMARY KEY DEFAULT gen\_random\_uuid(),  
-    email VARCHAR(255) UNIQUE NOT NULL,  
-    full\_name VARCHAR(255) NOT NULL,  
-    avatar\_url TEXT,  
-    role VARCHAR(50) DEFAULT 'USER', \-- 'USER', 'ADMIN'  
-    status VARCHAR(50) DEFAULT 'PENDING', \-- 'PENDING', 'APPROVED', 'BLOCKED'  
-    created\_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT\_TIMESTAMP  
+**Simplificado** (sin bonos de goles):
+
+| Acierto | Puntos base |
+|---------|-------------|
+| Resultado exacto | 10 pts |
+| Ganador o empate correcto | 5 pts |
+| Sin aciertos | 0 pts |
+
+**Multiplicadores por fase**:
+
+| Fase | Multiplicador | Máximo por partido |
+|------|---------------|-------------------|
+| Fase de Grupos | ×1 | 10 pts |
+| Dieciseisavos (R32) | ×2 | 20 pts |
+| Octavos (R16) | ×4 | 40 pts |
+| Cuartos de Final | ×8 | 80 pts |
+| Semifinales | ×16 | 160 pts |
+| Tercer Puesto | ×32 | 320 pts |
+| Final | ×64 | 640 pts |
+
+**Flujo de cálculo**:
+1. Admin ingresa resultado real del partido (o sync automática desde API).
+2. `PointsCalculatorService.processMatchResults()` itera todas las predicciones del partido.
+3. Aplica base points × phase multiplier.
+4. Actualiza `calculated_points` en la tabla `match_predictions`.
+
+### RF-05: Tabla de Clasificación (Leaderboard)
+
+- Ranking global de todos los usuarios aprobados, ordenado por puntaje descendente.
+- Puntaje total = suma de `calculated_points` de todas las predicciones procesadas.
+- Endpoint: `GET /api/leaderboard`.
+
+### RF-06: Páginas de Puntajes
+
+- **`/scores`**: Detalle de puntajes del usuario — resumen, predicciones por fase de grupos, predicciones de eliminatorias, posiciones de grupo, reglas inline.
+- **`/scores-rules`**: Reglas de puntaje completas, tabla de multiplicadores, regla de deadline, premios con pozo calculado.
+
+### RF-07: Sincronización de Datos
+
+- Consumo de **football-data.org API v4** para obtener equipos, partidos y resultados.
+- Competencia: FIFA World Cup 2026 (ID: 2000).
+- Botón admin: "Sincronizar desde API" → ejecuta `MatchSyncService.run()`.
+- Proceso: upsert equipos → upsert partidos → calcular puntos para partidos finalizados nuevos.
+- Manejo de equipos TBD (por definir) y partidos sin emparejar.
+
+---
+
+## 3. Requerimientos No Funcionales
+
+| ID | Requerimiento | Implementación |
+|----|---------------|----------------|
+| RNF-01 | Seguridad en bloqueos | Server valida timestamp vs fecha de bloqueo por fase |
+| RNF-02 | Escalabilidad | SQL crudo con pg (sin ORM), pool de conexiones |
+| RNF-03 | Arquitectura limpia | Rutas → Servicios → Repositorios (3 capas) |
+| RNF-04 | Mobile First | Tailwind CSS, layout responsivo, side-by-side en desktop |
+| RNF-05 | Sesiones seguras | nuxt-auth-utils con cookies cifradas (iron-webcrypto) |
+| RNF-06 | Validación de inputs | Zod schemas en endpoints admin |
+
+---
+
+## 4. Alcance y Exclusiones
+
+### In-Scope (MVP actual)
+
+- Autenticación Google OAuth + aprobación admin
+- Predicciones de fase de grupos (72 partidos) con tabla proyectada y real
+- Motor de puntos simplificado con multiplicadores por fase
+- Leaderboard global
+- Páginas de puntajes y reglas con premios
+- Panel admin: gestión de usuarios, partidos, resultados, sync
+- Sync de datos desde football-data.org
+- Despliegue en servidor interno (pm2 + Apache2)
+- Deploy script semi-automático (PowerShell)
+
+### Out-of-Scope
+
+- Predicciones especiales (goleador, MVP, etc.) — no implementadas
+- Bracket interactivo dinámico — placeholder
+- Procesamiento de pagos integrados
+- Chats o muros de comentarios
+- Estadísticas avanzadas de jugadores
+- Pruebas E2E (Playwright configurado pero no implementado)
+
+---
+
+## 5. Esquema de Base de Datos
+
+### 5.1 Tabla `users`
+
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    avatar_url TEXT,
+    role VARCHAR(50) DEFAULT 'USER',      -- 'USER', 'ADMIN'
+    status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'APPROVED', 'BLOCKED'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+```
 
-\-- 2\. Tabla de Partidos  
-CREATE TABLE matches (  
-    id INT PRIMARY KEY, \-- ID oficial de la FIFA o secuencial  
-    home\_team VARCHAR(100) NOT NULL,  
-    away\_team VARCHAR(100) NOT NULL,  
-    match\_date TIMESTAMP WITH TIME ZONE NOT NULL,  
-    phase VARCHAR(50) NOT NULL, \-- 'GROUP', 'R32', 'R16', 'QUARTERS', 'SEMIS', 'THIRD\_PLACE', 'FINAL'  
-    group\_letter CHAR(1), \-- 'A' a 'L' si es fase de grupos  
-    home\_score\_real INT,  
-    away\_score\_real INT,  
-    status VARCHAR(50) DEFAULT 'SCHEDULED', \-- 'SCHEDULED', 'LIVE', 'FINISHED'  
-    created\_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT\_TIMESTAMP  
+### 5.2 Tabla `teams`
+
+Equipos sincronizados desde football-data.org.
+
+```sql
+CREATE TABLE teams (
+    id INT PRIMARY KEY,                   -- ID de football-data.org
+    name VARCHAR(100) NOT NULL,
+    short_name VARCHAR(100),
+    tla VARCHAR(10),
+    crest_url TEXT,
+    country_code VARCHAR(10),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+```
 
-\-- 3\. Tabla de Predicciones de Partidos (Apuestas)  
-CREATE TABLE match\_predictions (  
-    id UUID PRIMARY KEY DEFAULT gen\_random\_uuid(),  
-    user\_id UUID REFERENCES users(id) ON DELETE CASCADE,  
-    match\_id INT REFERENCES matches(id) ON DELETE CASCADE,  
-    home\_score\_pred INT NOT NULL,  
-    away\_score\_pred INT NOT NULL,  
-    calculated\_points INT DEFAULT 0,  
-    processed BOOLEAN DEFAULT FALSE,  
-    updated\_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT\_TIMESTAMP,  
-    CONSTRAINT unique\_user\_match UNIQUE (user\_id, match\_id)  
+### 5.3 Tabla `matches`
+
+Partidos cargados desde la API (sync admin). NO se usa seed — los 104 partidos vienen del sync inicial.
+
+```sql
+CREATE TABLE matches (
+    id INT PRIMARY KEY,                   -- ID de football-data.org
+    utc_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    phase VARCHAR(50) NOT NULL,           -- 'GROUP','R32','R16','QUARTERS','SEMIS','THIRD_PLACE','FINAL'
+    "group" CHAR(1),                      -- 'A'..'L' en GROUP, NULL en eliminatorias
+    matchday INT,
+    home_team_id INT NOT NULL REFERENCES teams(id) ON DELETE RESTRICT,
+    away_team_id INT NOT NULL REFERENCES teams(id) ON DELETE RESTRICT,
+    home_score INT,
+    away_score INT,
+    status VARCHAR(50) DEFAULT 'SCHEDULED', -- 'SCHEDULED','LIVE','FINISHED'
+    last_synced_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+```
 
-\-- 4\. Tabla de Predicciones de Posiciones de Grupos  
-\-- NOTA: Estas filas se calcularán y persistirán de forma automatizada en el Backend  
-\-- cuando el usuario modifique una predicción de partido en el grupo correspondiente.  
-CREATE TABLE group\_predictions (  
-    id UUID PRIMARY KEY DEFAULT gen\_random\_uuid(),  
-    user\_id UUID REFERENCES users(id) ON DELETE CASCADE,  
-    group\_letter CHAR(1) NOT NULL,  
-    pos\_1\_team VARCHAR(100) NOT NULL,  
-    pos\_2\_team VARCHAR(100) NOT NULL,  
-    pos\_3\_team VARCHAR(100) NOT NULL,  
-    calculated\_points INT DEFAULT 0,  
-    processed BOOLEAN DEFAULT FALSE,  
-    updated\_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT\_TIMESTAMP,  
-    CONSTRAINT unique\_user\_group UNIQUE (user\_id, group\_letter)  
+### 5.4 Tabla `match_predictions`
+
+Predicciones de marcador por usuario y partido.
+
+```sql
+CREATE TABLE match_predictions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    match_id INT REFERENCES matches(id) ON DELETE CASCADE,
+    home_score_pred INT NOT NULL,
+    away_score_pred INT NOT NULL,
+    calculated_points INT DEFAULT 0,
+    processed BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_match UNIQUE (user_id, match_id)
 );
+```
 
-\-- 5\. Tabla de Predicciones Especiales y Ganadores Finales  
-CREATE TABLE special\_predictions (  
-    user\_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,  
-    top\_scorer VARCHAR(255),  
-    golden\_glove VARCHAR(255),  
-    mvp VARCHAR(255),  
-    champion\_team VARCHAR(255),  
-    calculated\_points INT DEFAULT 0,  
-    processed BOOLEAN DEFAULT FALSE,  
-    updated\_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT\_TIMESTAMP  
+### 5.5 Tabla `group_predictions`
+
+Posiciones proyectadas de grupo (calculadas automáticamente al modificar predicciones).
+
+```sql
+CREATE TABLE group_predictions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    "group" CHAR(1) NOT NULL,
+    pos_1_team VARCHAR(100) NOT NULL,
+    pos_2_team VARCHAR(100) NOT NULL,
+    pos_3_team VARCHAR(100) NOT NULL,
+    calculated_points INT DEFAULT 0,
+    processed BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_group UNIQUE (user_id, "group")
 );
+```
 
-## **5\. Arquitectura por Capas en Nuxt Server (Backend)**
+### 5.6 Índices
 
-La API del servidor Nuxt (directorio /server) se dividirá estrictamente bajo el flujo de responsabilidades:
+```sql
+CREATE INDEX idx_teams_tla ON teams(tla);
+CREATE INDEX idx_teams_name ON teams(name);
+CREATE INDEX idx_matches_phase ON matches(phase);
+CREATE INDEX idx_matches_group ON matches("group");
+CREATE INDEX idx_matches_date ON matches(utc_date);
+CREATE INDEX idx_matches_home_team ON matches(home_team_id);
+CREATE INDEX idx_matches_away_team ON matches(away_team_id);
+CREATE INDEX idx_matches_matchday ON matches(matchday);
+CREATE INDEX idx_matches_phase_date ON matches(phase, utc_date);
+CREATE INDEX idx_match_predictions_user ON match_predictions(user_id);
+CREATE INDEX idx_match_predictions_match ON match_predictions(match_id);
+CREATE INDEX idx_group_predictions_user ON group_predictions(user_id);
+```
 
-1. **Route (Entrada/HTTP):** Recibe el payload, valida la sesión del usuario (Google Auth) y delega la ejecución al Servicio correspondiente.  
-2. **Service (Negocio):** Implementa las reglas de cálculo, lógica de bloqueos por fecha y validación lógica de los datos. No sabe nada de HTTP ni de bases de datos directamente.  
-3. **Repository (Persistencia):** Ejecuta consultas SQL crudas utilizando un cliente Postgres (pg). Es la única capa que interactúa con la base de datos.
+---
 
-### **Diagrama de Flujo del Backend y Despliegue**
+## 6. Arquitectura Backend
 
-\[Cliente Nuxt/Browser\]   
-       │ (HTTP POST /api/bets)  
-       ▼ \[Desplegado en Vercel\]  
-\[Route: server/api/bets/index.post.ts\]   \<-- Valida Auth & Formato  
-       │  
-       ▼  
-\[Service: server/services/BetService.ts\]  \<-- Aplica Reglas de Negocio / Fecha límite  
-       │  
-       ▼  
-\[Repository: server/repositories/BetRepository.ts\] \<-- Query SQL Cruda  
-       │  
-       ▼ \[Conexión TCP / Pool de Conexiones\]  
-\[Base de Datos PostgreSQL (Alojada en Supabase)\]
+### 6.1 Diagrama de Capas
 
-## **6\. Pseudo-código de Tareas Críticas**
+```
+[Cliente/Browser]
+       │
+       ▼
+[Middleware: 01.auth.ts]          ← Hidrata usuario desde DB por sesión
+       │
+       ▼
+[Route: server/api/*.ts]         ← Valida auth, parsea body, delega al servicio
+       │
+       ▼
+[Service: server/services/*.ts]  ← Lógica de negocio, cálculos, validaciones
+       │
+       ▼
+[Repository: server/repositories/*.ts] ← SQL crudo con pg
+       │
+       ▼
+[PostgreSQL (Supabase)]
+```
 
-Para evitar el acoplamiento y la deuda técnica, se detalla el flujo completo para dos de las operaciones más delicadas del backend: **Guardar una apuesta** (con control de bloqueo dinámico) y el **Cálculo automático de puntos**.
+### 6.2 Estructura de Directorios
 
-### **6.0 Configuración de la Conexión de Base de Datos (/server/utils/db.ts)**
+```
+server/
+├── api/
+│   ├── admin/
+│   │   ├── matches/
+│   │   │   ├── [id]/result.post.ts    ← Ingresar resultado real
+│   │   │   └── sync.post.ts           ← Sincronizar desde football-data.org
+│   │   └── users/
+│   │       ├── [id]/status.patch.ts   ← Aprobar/bloquear usuario
+│   │       └── index.get.ts           ← Listar todos los usuarios
+│   ├── auth/
+│   │   ├── google.get.ts             ← Iniciar login Google
+│   │   ├── google/callback.get.ts    ← Callback de Google
+│   │   ├── logout.post.ts            ← Cerrar sesión
+│   │   └── me.get.ts                 ← Usuario actual
+│   ├── debug/session.get.ts          ← Verificar sesión (debug)
+│   ├── leaderboard/index.get.ts      ← Ranking global
+│   ├── matches/index.get.ts          ← Listar partidos
+│   ├── predictions/
+│   │   ├── bulk.post.ts              ← Guardar predicciones masivo
+│   │   ├── match.post.ts             ← Guardar predicción individual
+│   │   ├── me.get.ts                 ← Mis predicciones con datos de partido
+│   │   └── my-group-predictions.get.ts ← Mis predicciones de grupo
+│   └── standings/group/[letter].get.ts ← Standings proyectado + real
+├── middleware/01.auth.ts             ← Hidrata event.context.user
+├── repositories/
+│   ├── MatchRepository.ts
+│   ├── PredictionRepository.ts
+│   ├── TeamRepository.ts
+│   └── UserRepository.ts
+├── services/
+│   ├── MatchSyncService.ts           ← Sync desde API externa
+│   ├── PointsCalculatorService.ts    ← Cálculo de puntos
+│   └── PredictionService.ts          ← Guardar predicciones + standings
+└── utils/
+    ├── auth.ts                       ← requireUser, requireApproved, requireAdmin
+    ├── db.ts                         ← Pool de conexiones pg
+    ├── football-data.ts              ← Fetch de football-data.org API
+    └── google-oauth.ts               ← Hash/verify state para OAuth
+```
 
-Para conectar de forma eficiente la función Serverless de Vercel con la base de datos PostgreSQL de Supabase, utilizaremos la biblioteca pg configurando un **Pool de Conexiones**.
+### 6.3 Componentes Clave
 
-import pg from 'pg';
+| Servicio | Responsabilidad |
+|----------|----------------|
+| `PointsCalculatorService` | Calcula puntos: exacto=10, ganador=5, × phase multiplier |
+| `PredictionService` | Guarda predicciones con transacción, recalcula standings de grupo, calcula standings reales |
+| `MatchSyncService` | Orquesta sync: upsert equipos → upsert partidos → calcular puntos finales |
+| `PredictionRepository` | CRUD predicciones, upsert group predictions |
+| `MatchRepository` | CRUD partidos, queries por grupo/fase |
+| `TeamRepository` | Upsert equipos |
+| `UserRepository` | Query usuarios |
 
-const { Pool } \= pg;
+---
 
-// Cargamos la variable de entorno DATABASE\_URL que proporciona Supabase  
-// NOTA: Para ambientes serverless de Vercel, se recomienda usar el Transaction Connection String de Supabase (puerto 6543\)  
-const connectionString \= process.env.DATABASE\_URL;
+## 7. Algoritmos Críticos
 
-if (\!connectionString) {  
-    console.error("ADVERTENCIA: La variable de entorno DATABASE\_URL no está definida.");  
+### 7.1 Cálculo de Puntos (`PointsCalculatorService`)
+
+```typescript
+calculatePointsForMatch(homeReal, awayReal, homePred, awayPred, phase): number {
+  const isExact = homeReal === homePred && awayReal === awayPred;
+  const realWinner = homeReal > awayReal ? 'HOME' : awayReal > homeReal ? 'AWAY' : 'DRAW';
+  const predWinner = homePred > awayPred ? 'HOME' : awayPred > homePred ? 'AWAY' : 'DRAW';
+  const isWinner = realWinner === predWinner;
+
+  let base = isExact ? 10 : isWinner ? 5 : 0;
+  return base * PHASE_MULTIPLIERS[phase];
 }
+```
 
-export const dbClient \= new Pool({  
-    connectionString,  
-    // Configuraciones clave para entornos Serverless de Vercel  
-    max: 10, // Control de concurrencia para evitar saturación de conexiones en el tier gratuito  
-    idleTimeoutMillis: 30000, // Cerrar conexiones inactivas para liberar recursos  
-    connectionTimeoutMillis: 2000, // Tiempo límite de espera para conectar  
-    ssl: {  
-        rejectUnauthorized: false // Requerido por Supabase para conexiones SSL seguras  
-    }  
-});
+### 7.2 Standings Proyectados (`PredictionService.calculateStandings`)
 
-### **6.1 Flujo: Guardar Apuesta de Partido (Grupos y Eliminatorias)**
+Calcula posiciones basándose en predicciones del usuario (no en resultados reales):
 
-#### **Capa 1: Route (/server/api/predictions/match.post.ts)**
+1. Inicializa stats por equipo (pts=0, gd=0, gf=0).
+2. Para cada predicción: aplica reglas FIFA (3pts victoria, 1pt empate).
+3. Ordena: puntos ↓ → diferencia de goles ↓ → goles a favor ↓.
+4. Retorna `StandingEntry[]` con teamId, name, crest_url, points, gf, gd.
 
-// Pseudocódigo del manejador de la ruta de Nuxt Server (Nitro)  
-export default defineEventHandler(async (event) \=\> {  
-    try {  
-        // 1\. Validar autenticación del usuario mediante sesión de Google  
-        const session \= await getUserSession(event);  
-        if (\!session || \!session.userId) {  
-            throw createError({ statusCode: 401, statusMessage: 'No autorizado' });  
-        }
+### 7.3 Standings Reales (`PredictionService.calculateRealStandings`)
 
-        const body \= await readBody(event);  
-        const { matchId, homeScorePred, awayScorePred } \= body;
+Igual al anterior pero usa `home_score` / `away_score` de partidos con status `FINISHED`.
 
-        // 2\. Validación básica de formato  
-        if (matchId \=== undefined || homeScorePred \=== undefined || awayScorePred \=== undefined) {  
-            throw createError({ statusCode: 400, statusMessage: 'Parámetros inválidos' });  
-        }
+### 7.4 Recalculo de Posiciones de Grupo
 
-        // 3\. Delegar al Servicio de Predicciones  
-        const predictionService \= new PredictionService();  
-        const result \= await predictionService.saveMatchPrediction(  
-            session.userId,   
-            matchId,   
-            homeScorePred,   
-            awayScorePred  
-        );
+Al guardar una predicción de grupo:
+1. Dentro de transacción SQL (`BEGIN/COMMIT/ROLLBACK`).
+2. Recalcula standings del grupo con las predicciones actualizadas.
+3. Persiste top 3 equipos en `group_predictions`.
 
-        return { success: true, data: result };  
-    } catch (error: any) {  
-        return { success: false, error: error.message || 'Error interno del servidor' };  
-    }  
-});
+---
 
-#### **Capa 2: Service (/server/services/PredictionService.ts)**
+## 8. Variables de Entorno
 
-import { PredictionRepository } from '../repositories/PredictionRepository';  
-import { MatchRepository } from '../repositories/MatchRepository';
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `DATABASE_URL` | URL de conexión PostgreSQL (Supabase pooler, puerto 6543) | `postgresql://...` |
+| `NUXT_SESSION_PASSWORD` | Password para cifrado de sesiones (mín 32 chars) | `openssl rand -base64 32` |
+| `AUTH_SECRET` | Secret para nuxt-auth-utils | `dev-secret-change-in-production` |
+| `GOOGLE_CLIENT_ID` | Client ID de Google OAuth | `xxx.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Client Secret de Google OAuth | `GOCSPX-xxx` |
+| `GOOGLE_REDIRECT_URI` | URI de callback de Google | `https://domain/api/auth/google/callback` |
+| `API_TOKEN` | Token de football-data.org | `your-token` |
+| `FOOTBALL_DATA_BASE_URL` | Base URL de la API | `https://api.football-data.org/v4` |
+| `FOOTBALL_DATA_COMPETITION_ID` | ID de la competencia (Mundial 2026) | `2000` |
+| `GROUP_PHASE_LOCK_DATE` | Fecha de bloqueo de fase de grupos | `2026-06-11T00:00:00Z` |
+| `NUXT_PUBLIC_APP_NAME` | Nombre de la aplicación | `Polla Flesan DVC` |
+| `NODE_ENV` | Entorno de ejecución | `development` / `production` |
 
-export class PredictionService {  
-    private predictionRepo \= new PredictionRepository();  
-    private matchRepo \= new MatchRepository();
+---
 
-    async saveMatchPrediction(userId: string, matchId: number, homeScore: number, awayScore: number) {  
-        // 1\. Obtener la información del partido para verificar fechas y fase  
-        const match \= await this.matchRepo.getMatchById(matchId);  
-        if (\!match) {  
-            throw new Error('El partido no existe.');  
-        }
+## 9. Endpoints API
 
-        const currentDate \= new Date();
+### Autenticación
 
-        // 2\. Regla de Negocio: Validar bloqueo dinámico por fase  
-        if (match.phase \=== 'GROUP') {  
-            // Fase de Grupos tiene fecha fija (antes de la inauguración oficial)  
-            const blockDate \= new Date('2026-06-11T00:00:00Z');   
-            if (currentDate \>= blockDate) {  
-                throw new Error('La fase de grupos está bloqueada. No se permiten más modificaciones.');  
-            }  
-        } else {  
-            // Fases eliminatorias: Bloquear estrictamente al iniciar el primer partido de la fase del partido  
-            const phaseStartDate \= await this.matchRepo.getMinDateByPhase(match.phase);  
-            if (\!phaseStartDate) {  
-                throw new Error('No se ha podido definir la fecha de inicio de la fase.');  
-            }  
-            if (currentDate \>= phaseStartDate) {  
-                throw new Error(\`La fase eliminatoria ${match.phase} está en juego y bloqueada.\`);  
-            }  
-        }
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| GET | `/api/auth/google` | No | Redirige a Google OAuth |
+| GET | `/api/auth/google/callback` | No | Callback de Google, crea sesión |
+| POST | `/api/auth/logout` | Sí | Cierra sesión |
+| GET | `/api/auth/me` | Sí | Retorna usuario actual (401 si no hay sesión) |
 
-        // 3\. Persistir en la base de datos a través del Repositorio  
-        const prediction \= await this.predictionRepo.upsertMatchPrediction(userId, matchId, homeScore, awayScore);
+### Predicciones
 
-        // 4\. Lógica Adicional Automática para Grupos: Recalcular la tabla del grupo basándose en los partidos del usuario  
-        if (match.phase \=== 'GROUP' && match.group\_letter) {  
-            await this.recalculateAndSaveGroupPositions(userId, match.group\_letter);  
-        }
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| POST | `/api/predictions/match` | Approved | Guardar predicción individual |
+| POST | `/api/predictions/bulk` | Approved | Guardar predicciones masivas (por grupo) |
+| GET | `/api/predictions/me` | Approved | Mis predicciones con datos de partido |
+| GET | `/api/predictions/my-group-predictions` | Approved | Mis predicciones de posición de grupo |
 
-        return prediction;  
+### Standings y Leaderboard
+
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| GET | `/api/standings/group/:letter` | Approved | Standings proyectado + real del grupo |
+| GET | `/api/leaderboard` | Approved | Ranking global de todos los usuarios |
+
+### Partidos
+
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| GET | `/api/matches` | Approved | Listar todos los partidos |
+
+### Admin
+
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| GET | `/api/admin/users` | Admin | Listar todos los usuarios |
+| PATCH | `/api/admin/users/:id/status` | Admin | Cambiar estado de usuario |
+| POST | `/api/admin/matches/sync` | Admin | Sincronizar desde football-data.org |
+| POST | `/api/admin/matches/:id/result` | Admin | Ingresar resultado real |
+
+### Debug
+
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| GET | `/api/debug/session` | No | Verificar estado de sesión |
+
+---
+
+## 10. Páginas y Rutas
+
+| Ruta | Página | Auth | Descripción |
+|------|--------|------|-------------|
+| `/` | index.vue | No (auto-redirect si auth) | Homepage — logo, CTA, resumen si autenticado |
+| `/auth/login` | login.vue | No | Login con Google |
+| `/groups` | groups/index.vue | Approved | Predicciones fase de grupo (side-by-side) |
+| `/bracket` | bracket/index.vue | Approved | Fase eliminatoria (placeholder) |
+| `/scores` | scores/index.vue | Approved | Mis puntajes detallados |
+| `/scores-rules` | scores-rules/index.vue | No | Reglas de puntaje + premios |
+| `/leaderboard` | leaderboard/index.vue | Approved | Tabla de clasificación |
+| `/admin` | admin/index.vue | Admin | Dashboard admin |
+| `/admin/users` | admin/users.vue | Admin | Gestión de usuarios |
+| `/admin/matches` | admin/matches.vue | Admin | Gestión de partidos + sync |
+| `/admin/bracket` | admin/bracket.vue | Admin | Bracket admin |
+
+---
+
+## 11. Componentes Frontend
+
+### `components/group/`
+
+| Componente | Descripción |
+|------------|-------------|
+| `MatchList.vue` | Lista de partidos de un grupo con inputs de predicción |
+| `Standings.vue` | Tabla de posiciones proyectada (según predicciones) |
+| `RealStandings.vue` | Tabla de posiciones real (según resultados) |
+
+### `components/scores/`
+
+| Componente | Descripción |
+|------------|-------------|
+| `ScoreSummary.vue` | Resumen de puntaje total del usuario |
+| `MatchScoreCard.vue` | Card de predicción con resultado real y explicación de puntos |
+| `GroupPositionCard.vue` | Card de posición de grupo predicha |
+| `ScoringRules.vue` | Reglas de puntaje + tabla de multiplicadores |
+
+### `components/common/`
+
+| Componente | Descripción |
+|------------|-------------|
+| `TeamLogo.vue` | Logo + nombre del equipo (reutilizable) |
+
+### `components/auth/`
+
+| Componente | Descripción |
+|------------|-------------|
+| `PendingState.vue` | Mensaje de espera de aprobación |
+
+---
+
+## 12. Despliegue
+
+### 12.1 Despliegue Primario: Servidor Interno
+
+- **URL**: `mundial2026.grupoflesan.com`
+- **Stack**: Apache2 (reverse proxy) + PM2 (Node.js process manager)
+- **Script**: `deploy/deploy.ps1` (PowerShell, semi-automático, 4 pasos)
+
+#### Pasos del deploy
+
+1. **Build local**: `npm run build` → genera `.output/`
+2. **Preparar servidor**: limpia directorio remoto
+3. **Subir archivos**: transfiere `.output/` vía SCP/pscp
+4. **Reiniciar PM2**: ejecuta `pm2 start .ecosystem.config.js`
+
+#### Configuración PM2 (`deploy/ecosystem.config.js`)
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'polla_flesan',
+    script: './server/index.mjs',
+    instances: 'max',        // Cluster mode
+    exec_mode: 'cluster',
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3001,
+      HOST: '127.0.0.1',
+      // ... variables de entorno
     }
+  }]
+};
+```
 
-    private async recalculateAndSaveGroupPositions(userId: string, groupLetter: string) {  
-        const groupMatches \= await this.matchRepo.getMatchesByGroup(groupLetter);  
-        const userPredictions \= await this.predictionRepo.getPredictionsByUserAndMatches(  
-            userId,   
-            groupMatches.map(m \=\> m.id)  
-        );
+#### Variables del deploy (`deploy/.env`)
 
-        const standing \= this.calculateStandings(groupMatches, userPredictions);
+```env
+PROJECT_NAME=polla_flesan
+REMOTE_BASE_DIR=/var/www/one
+HOST_QA=server-qa.grupoflesan.com
+HOST_PD=server.grupoflesan.com
+USER_QA=deploy
+USER_PD=deploy
+PASS_QA=***
+PASS_PD=***
+```
 
-        await this.predictionRepo.upsertGroupPrediction(  
-            userId,   
-            groupLetter,   
-            standing\[0\], // pos\_1\_team  
-            standing\[1\], // pos\_2\_team  
-            standing\[2\]  // pos\_3\_team  
-        );  
-    }
+### 12.2 Despliegue Secundario: Vercel
 
-    private calculateStandings(matches: any\[\], predictions: any\[\]): string\[\] {  
-        const stats: Record\<string, { points: number, gd: number, gf: number }\> \= {};
+- Conexión automática al hacer push a `main`
+- Variables de entorno configuradas en el dashboard de Vercel
+- Útil para preview y testing
 
-        matches.forEach(m \=\> {  
-            if (\!stats\[m.home\_team\]) stats\[m.home\_team\] \= { points: 0, gd: 0, gf: 0 };  
-            if (\!stats\[m.away\_team\]) stats\[m.away\_team\] \= { points: 0, gd: 0, gf: 0 };  
-        });
+---
 
-        predictions.forEach(p \=\> {  
-            const match \= matches.find(m \=\> m.id \=== p.match\_id);  
-            if (\!match) return;
+## 13. Dependencias
 
-            const home \= match.home\_team;  
-            const away \= match.away\_team;  
-            const hs \= p.home\_score\_pred;  
-            const as \= p.away\_score\_pred;
+### Runtime
 
-            stats\[home\].gf \+= hs;  
-            stats\[away\].gf \+= as;  
-            stats\[home\].gd \+= (hs \- as);  
-            stats\[away\].gd \+= (as \- hs);
+| Paquete | Versión | Uso |
+|---------|---------|-----|
+| `nuxt` | ^3.15.0 | Framework fullstack |
+| `vue` | ^3.5.0 | UI framework |
+| `vue-router` | ^4.5.0 | Routing |
+| `pinia` | ^3.0.4 | State management |
+| `@pinia/nuxt` | ^0.11.3 | Integración Pinia + Nuxt |
+| `nuxt-auth-utils` | ^0.5.0 | Sesiones y OAuth |
+| `pg` | ^8.13.0 | Cliente PostgreSQL |
+| `zod` | ^4.4.3 | Validación de schemas |
 
-            if (hs \> as) {  
-                stats\[home\].points \+= 3;  
-            } else if (as \> hs) {  
-                stats\[away\].points \+= 3;  
-            } else {  
-                stats\[home\].points \+= 1;  
-                stats\[away\].points \+= 1;  
-            }  
-        });
+### Dev
 
-        return Object.keys(stats).sort((a, b) \=\> {  
-            if (stats\[b\].points \!== stats\[a\].points) {  
-                return stats\[b\].points \- stats\[a\].points;  
-            }  
-            if (stats\[b\].gd \!== stats\[a\].gd) {  
-                return stats\[b\].gd \- stats\[a\].gd;  
-            }  
-            return stats\[b\].gf \- stats\[a\].gf;  
-        });  
-    }  
-}
+| Paquete | Versión | Uso |
+|---------|---------|-----|
+| `vitest` | ^3.0.0 | Unit testing |
+| `typescript` | ^5.7.0 | Tipado estático |
+| `tailwindcss` | ^3.4.0 | CSS utility-first |
+| `autoprefixer` | ^10.4.0 | PostCSS |
+| `postcss` | ^8.5.0 | CSS processing |
+| `@playwright/test` | ^1.49.0 | E2E testing (configurado, no implementado) |
 
-#### **Capa 3: Repository (/server/repositories/PredictionRepository.ts)**
+---
 
-import { dbClient } from '../utils/db'; // Cliente pg nativo configurado con Supabase
+## 14. Tests
 
-export class PredictionRepository {  
-    async upsertMatchPrediction(userId: string, matchId: number, homeScore: number, awayScore: number) {  
-        const query \= \`  
-            INSERT INTO match\_predictions (user\_id, match\_id, home\_score\_pred, away\_score\_pred, updated\_at)  
-            VALUES ($1, $2, $3, $4, NOW())  
-            ON CONFLICT (user\_id, match\_id)   
-            DO UPDATE SET   
-                home\_score\_pred \= EXCLUDED.home\_score\_pred,  
-                away\_score\_pred \= EXCLUDED.away\_score\_pred,  
-                updated\_at \= NOW()  
-            RETURNING \*;  
-        \`;  
-          
-        const values \= \[userId, matchId, homeScore, awayScore\];  
-        const result \= await dbClient.query(query, values);  
-        return result.rows\[0\];  
-    }
+51 tests unitarios en 6 archivos, ejecutados con Vitest.
 
-    async upsertGroupPrediction(userId: string, groupLetter: string, pos1: string, pos2: string, pos3: string) {  
-        const query \= \`  
-            INSERT INTO group\_predictions (user\_id, group\_letter, pos\_1\_team, pos\_2\_team, pos\_3\_team, updated\_at)  
-            VALUES ($1, $2, $3, $4, $5, NOW())  
-            ON CONFLICT (user\_id, group\_letter)   
-            DO UPDATE SET   
-                pos\_1\_team \= EXCLUDED.pos\_1\_team,  
-                pos\_2\_team \= EXCLUDED.pos\_2\_team,  
-                pos\_3\_team \= EXCLUDED.pos\_3\_team,  
-                updated\_at \= NOW()  
-            RETURNING \*;  
-        \`;  
-        const values \= \[userId, groupLetter, pos1, pos2, pos3\];  
-        await dbClient.query(query, values);  
-    }  
-}
+| Archivo | Tests | Cubre |
+|---------|-------|-------|
+| `PointsCalculatorService.test.ts` | 11 | Cálculo de puntos + multiplicadores de fase |
+| `PredictionService.test.ts` | 4 | Guardado de predicciones + standings |
+| `MatchSyncService.test.ts` | 4 | Sync desde API, deduplicación, manejo de errores |
+| `football-data.test.ts` | 15 | Parsing de API, mapeo de equipos/partidos |
+| `auth.test.ts` | 11 | Middleware de autenticación y autorización |
+| `google-oauth.test.ts` | 6 | Hash y verificación de state OAuth |
 
-### **6.2 Flujo: Motor de Puntuación (Cálculo de Partido)**
+---
 
-Este flujo es ejecutado por el administrador cuando se registra el marcador definitivo de un partido jugado.
+## 15. Git y Control de Versiones
 
-#### **Capa 2: Core Service (/server/services/PointsCalculatorService.ts)**
-
-export class PointsCalculatorService {  
-      
-    // Método puro que implementa las reglas del JSON sin tocar base de datos  
-    calculatePointsForMatch(  
-        homeReal: number,   
-        awayReal: number,   
-        homePred: number,   
-        awayPred: number  
-    ): number {  
-        let points \= 0;
-
-        const isExactMatch \= (homeReal \=== homePred) && (awayReal \=== awayPred);  
-          
-        const realWinner \= homeReal \> awayReal ? 'HOME' : (awayReal \> homeReal ? 'AWAY' : 'DRAW');  
-        const predWinner \= homePred \> awayPred ? 'HOME' : (awayPred \> homePred ? 'AWAY' : 'DRAW');  
-        const isWinnerMatch \= realWinner \=== predWinner;
-
-        // Regla: No acumulativo entre Resultado Exacto (10 pts) y Ganador/Empate sin marcador (5 pts)  
-        if (isExactMatch) {  
-            points \+= 10;  
-        } else if (isWinnerMatch) {  
-            points \+= 5;  
-        }
-
-        // Acierto cantidad total de goles del partido (+2 puntos)  
-        const totalGolesReal \= homeReal \+ awayReal;  
-        const totalGolesPred \= homePred \+ awayPred;  
-        if (totalGolesReal \=== totalGolesPred) {  
-            points \+= 2;  
-        }
-
-        // Acierto un solo equipo goles (+1 punto)  
-        if (\!isExactMatch) {  
-            if (homeReal \=== homePred) points \+= 1;  
-            if (awayReal \=== awayPred) points \+= 1;  
-        }
-
-        return points;  
-    }
-
-    // Proceso orquestador que actualiza todas las predicciones para un partido finalizado  
-    async processMatchResults(matchId: number, homeRealScore: number, awayRealScore: number) {  
-        const predictionRepo \= new PredictionRepository();  
-          
-        // 1\. Buscar todas las predicciones de los usuarios para ese partido  
-        const predictions \= await predictionRepo.getPredictionsByMatch(matchId);
-
-        for (const pred of predictions) {  
-            const calculatedPoints \= this.calculatePointsForMatch(  
-                homeRealScore,   
-                awayRealScore,   
-                pred.home\_score\_pred,   
-                pred.away\_score\_pred  
-            );
-
-            // 2\. Actualizar los puntos calculados en la DB usando SQL Crudo  
-            await predictionRepo.updatePredictionPoints(pred.id, calculatedPoints);  
-        }  
-    }  
-}
-
-## **7\. Plan de Control de Calidad (QA)**
-
-Para asegurar la robustez de las reglas matemáticas y de la seguridad de la app, se ejecutará una estrategia de testing en tres fases:
-
-1. **Pruebas Unitarias (Backend Core):**  
-   * Framework: Vitest.  
-   * Objetivo: Probar el método calculatePointsForMatch con todos los escenarios del JSON y el algoritmo de cálculo de posiciones del grupo (calculateStandings) para verificar que resuelva los desempates según la lógica estricta de la FIFA.  
-2. **Pruebas de Integración (API y Bloqueos):**  
-   * Objetivo: Validar que el repositorio de persistencia guarde correctamente el registro en la base de datos de PostgreSQL usando queries crudas y que el servicio de predicciones bloquee efectivamente las solicitudes de forma dinámica dependiendo de la fase activa evaluada.  
-3. **Pruebas de Extremo a Extremo (E2E):**  
-   * Framework: Playwright.  
-   * Objetivo: Automatizar el flujo crítico: Un usuario inicia sesión con Google (simulado), ingresa a la pestaña de fase de grupos, llena sus pronósticos y verifica que se reflejen correctamente en su perfil y en la tabla de clasificación.
-
-## **8\. Estimación Temporal e Hitos de Entrega y Despliegue**
-
-El desarrollo se distribuirá en un plan intensivo de **4 Sprints** de una semana cada uno para llegar listos a producción.
-
-\[Sprint 1: Base & Auth\] ──► \[Sprint 2: Motor & Grupos\] ──► \[Sprint 3: Bracket & Admin\] ──► \[Sprint 4: QA & Prod\]
-
-### **8.1 Pasos para el Despliegue Rápido (Supabase \+ Vercel)**
-
-Este proceso toma menos de 10 minutos una vez programada la app:
-
-1. **Creación en Supabase:** Crear un proyecto nuevo (gratuito) en Supabase para obtener la base de datos PostgreSQL de inmediato.  
-2. **Obtener Cadena de Conexión:** Ir a *Settings \-\> Database* en Supabase y copiar la URI de conexión de modo Pooler (puerto 6543), ya que las funciones de Vercel necesitan optimizar el pool de conexiones.  
-3. **Ejecutar Esquema de Base de Datos:** Pegar el script de creación de tablas (Sección 4.2) en el editor SQL de Supabase para inicializar la base de datos.  
-4. **Vercel Deploy:** Conectar el repositorio de GitHub a Vercel.  
-5. **Configuración de Variables de Entorno en Vercel:** Agregar la variable DATABASE\_URL con la cadena de conexión de Supabase y las llaves de Google Auth. ¡Y listo\!
-
-### **8.2 Plan de Sprints**
-
-* **Sprint 1: Cimiento de Arquitectura, Autenticación y Conexión Supabase**  
-  * Configuración inicial del pool en /server/utils/db.ts.  
-  * Creación de las tablas iniciales en Supabase y primera prueba de inserción por consola.  
-  * Integración del flujo de Google OAuth y aprobación de accesos.  
-* **Sprint 2: Motor de Apuestas y Fase de Grupos**  
-  * Implementación del motor de cálculo de puntos.  
-  * Interfaz visual de carga de pronósticos para los 72 partidos de grupo.  
-  * Algoritmo de cálculo automático de posiciones de grupos basado en predicciones de partidos e implementación de reglas de desempate de la FIFA.  
-* **Sprint 3: Fase Eliminatoria Dinámica (Bracket Secuencial) y Panel de Admin**  
-  * Interfaz del bracket interactivo que renderiza dinámicamente según la fase actual cargada por el Administrador.  
-  * Panel administrativo para ingreso de resultados y configuración de llaves eliminatorias reales.  
-* **Sprint 4: Tabla de Líderes, QA y Despliegue**  
-  * Vista del Leaderboard global con auditoría pública post-bloqueo.  
-  * Ejecución del set de pruebas unitarias y de integración.  
-  * Despliegue continuo en Vercel apuntando a la base de datos de producción de Supabase.
+- **Remoto**: `https://github.com/GutsanDVC/polla_flesan.git`
+- **Rama principal**: `main`
+- **Último commit**: `94fd000` — feat: scoring simplification, real standings, scores pages, bulk predictions, UI/UX improvements
+- **Commits siguen convención**: `feat:`, `fix:`, `refactor:`, etc.
+- **Deploy trigger**: push a `main` → Vercel auto-deploy + deploy manual al servidor interno

@@ -10,7 +10,10 @@ export default defineEventHandler(async (event) => {
       [session.user.id],
     );
     const row = result.rows[0];
-    if (!row) return;
+    if (!row) {
+      console.warn('[auth middleware] User not found in DB:', session.user.id);
+      return;
+    }
 
     event.context.user = {
       id: row.id,
@@ -20,7 +23,7 @@ export default defineEventHandler(async (event) => {
       role: row.role,
       status: row.status,
     };
-  } catch (err) {
-    console.error('[auth middleware] DB error:', err);
+  } catch (err: any) {
+    console.error('[auth middleware] DB error:', err.message, 'userId:', session.user.id);
   }
 });

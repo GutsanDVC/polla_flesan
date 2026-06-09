@@ -145,6 +145,15 @@ if ($startStep -le 3) {
         Write-Host "Error en la transferencia." -ForegroundColor Red
         exit 1
     }
+
+    Write-Host "Subiendo ecosystem.config.js..." -ForegroundColor Yellow
+    $ecosystemFile = Join-Path $PSScriptRoot "ecosystem.config.js"
+    pscp -pw "$PASSWORD" "$ecosystemFile" "$USERNAME@${SERVER}:$REMOTE_PATH/.ecosystem.config.js"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error subiendo ecosystem.config.js." -ForegroundColor Red
+        exit 1
+    }
 }
 
 # ----------------------------------------------

@@ -5,6 +5,10 @@ import { requireApproved } from '~~/server/utils/auth';
 import type { StandingEntry } from '~~/server/services/PredictionService';
 
 export default defineEventHandler(async (event) => {
+  setResponseHeaders(event, {
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+  });
+
   const user = requireApproved(event);
   const groupLetter = event.context.params?.letter;
 
