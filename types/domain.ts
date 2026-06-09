@@ -53,6 +53,8 @@ export interface User {
   avatar_url: string | null;
   role: UserRole;
   status: UserStatus;
+  payment_status: string;
+  payment_receipt_url: string | null;
   created_at?: string;
 }
 

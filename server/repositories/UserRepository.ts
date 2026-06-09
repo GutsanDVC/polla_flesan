@@ -2,7 +2,7 @@ import { dbClient } from '../utils/db';
 
 export class UserRepository {
   async getUserById(id: string) {
-    const query = 'SELECT id, email, full_name, avatar_url, role, status, created_at FROM users WHERE id = $1';
+    const query = 'SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM users WHERE id = $1';
     const result = await dbClient.query(query, [id]);
     return result.rows[0] || null;
   }
@@ -33,7 +33,7 @@ export class UserRepository {
   }
 
   async getAllUsers() {
-    const query = 'SELECT id, email, full_name, avatar_url, role, status, created_at FROM users ORDER BY created_at DESC';
+    const query = 'SELECT id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at FROM users ORDER BY created_at DESC';
     const result = await dbClient.query(query);
     return result.rows;
   }
@@ -42,5 +42,16 @@ export class UserRepository {
     const query = 'SELECT id, email, full_name, avatar_url, role, status FROM users WHERE status = \'APPROVED\' ORDER BY full_name ASC';
     const result = await dbClient.query(query);
     return result.rows;
+  }
+
+  async updatePaymentFields(userId: string, paymentStatus: string, paymentReceiptUrl?: string | null) {
+    const query = `
+      UPDATE users
+      SET payment_status = $1, payment_receipt_url = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING id, email, full_name, avatar_url, role, status, payment_status, payment_receipt_url, created_at
+    `;
+    const result = await dbClient.query(query, [paymentStatus, paymentReceiptUrl || null, userId]);
+    return result.rows[0] || null;
   }
 }
