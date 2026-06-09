@@ -101,6 +101,11 @@ if ($startStep -le 1) {
     }
 
     if (-not $skipBuild) {
+        if (Test-Path $LOCAL_OUTPUT) {
+            Write-Host "Eliminando .output/ anterior para evitar cache..." -ForegroundColor Yellow
+            Remove-Item -Recurse -Force $LOCAL_OUTPUT
+        }
+
         Write-Host "`n[1/4] Ejecutando Build local..." -ForegroundColor Yellow
         $env:NODE_OPTIONS = "--max-old-space-size=4096 --no-deprecation"
         Invoke-Expression $BUILD_CMD
