@@ -15,8 +15,12 @@ export const dbClient = new Pool({
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 5000,
   ssl: { rejectUnauthorized: false },
-});
-
-dbClient.on('connect', (client) => {
-  client.query(`SET search_path TO ${schema}`);
-});
+  async afterCreate(client: pg.PoolClient, done: (err: Error | null, client?: pg.PoolClient) => void) {
+    try {
+      await client.query(`SET search_path TO ${schema}`);
+      done(null, client);
+    } catch (err) {
+      done(err as Error, client);
+    }
+  },
+} as pg.PoolConfig);
