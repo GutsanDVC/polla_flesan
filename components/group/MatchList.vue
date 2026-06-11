@@ -12,6 +12,9 @@
           <span v-else-if="match.status === 'LIVE'" class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
             En vivo
           </span>
+          <span v-else-if="isMatchLocked(match)" class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
+            Cerrado
+          </span>
         </div>
 
         <div class="flex items-center justify-between gap-4">
@@ -25,7 +28,8 @@
               min="0"
               :value="getPrediction(match.id, 'home')"
               @change="updatePrediction(match.id, 'home', $event)"
-              class="w-12 text-center border rounded py-1"
+              :disabled="isMatchLocked(match)"
+              class="w-12 text-center border rounded py-1 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <span class="text-gray-400">-</span>
             <input
@@ -33,7 +37,8 @@
               min="0"
               :value="getPrediction(match.id, 'away')"
               @change="updatePrediction(match.id, 'away', $event)"
-              class="w-12 text-center border rounded py-1"
+              :disabled="isMatchLocked(match)"
+              class="w-12 text-center border rounded py-1 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
@@ -61,6 +66,12 @@ const props = defineProps<{
   matches: Match[];
   predictions: MatchPrediction[];
 }>();
+
+const LOCK_DATE = new Date('2026-06-12T00:00:00Z');
+
+function isMatchLocked(match: Match) {
+  return new Date(match.utc_date) <= new Date() || new Date() >= LOCK_DATE;
+}
 
 const localPredictions = ref<Record<number, { home: number; away: number }>>({});
 
@@ -110,5 +121,5 @@ function formatDate(dateStr: string) {
   });
 }
 
-defineExpose({ localPredictions });
+defineExpose({ localPredictions, isMatchLocked });
 </script>

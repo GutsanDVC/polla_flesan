@@ -26,6 +26,7 @@
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-700">Grupo {{ selectedGroup }}</h2>
         <button
+          v-if="!isGlobalLock"
           @click="saveAllPredictions"
           :disabled="saving || !hasChanges"
           :class="[
@@ -37,6 +38,10 @@
         >
           {{ saving ? 'Guardando...' : 'Guardar todo' }}
         </button>
+      </div>
+
+      <div v-if="isGlobalLock" class="bg-gray-100 text-gray-600 px-4 py-2 rounded text-sm">
+        Predicciones cerradas. Ya no es posible modificar pronósticos.
       </div>
 
       <div v-if="saveMessage" :class="[
@@ -84,6 +89,9 @@ const groupStanding = ref<StandingEntry[]>([]);
 const realStanding = ref<StandingEntry[]>([]);
 const matchListRef = ref<any>(null);
 const saveMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+const LOCK_DATE = new Date('2026-06-12T00:00:00Z');
+const isGlobalLock = computed(() => new Date() >= LOCK_DATE);
 
 const originalPredictions = ref<Record<number, { home: number; away: number }>>({});
 
@@ -141,12 +149,20 @@ async function saveAllPredictions() {
 
   for (const matchId of Object.keys(current)) {
     const id = Number(matchId);
+    const match = groupMatches.value.find((m) => m.id === id);
+    if (match && matchListRef.value.isMatchLocked(match)) continue;
     const pred = current[id];
     toSave.push({
       matchId: id,
       homeScorePred: pred.home,
       awayScorePred: pred.away,
     });
+  }
+
+  if (toSave.length === 0) {
+    saveMessage.value = { type: 'error', text: 'No hay predicciones editables para guardar' };
+    saving.value = false;
+    return;
   }
 
   try {
