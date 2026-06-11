@@ -8,6 +8,7 @@
           </NuxtLink>
 
           <div v-if="auth.isApproved" class="hidden md:flex items-center space-x-6">
+            <NuxtLink to="/live" class="hover:text-green-200 transition font-semibold text-yellow-300">En vivo</NuxtLink>
             <NuxtLink to="/groups" class="hover:text-green-200 transition">Fase de Grupos</NuxtLink>
             <NuxtLink to="/bracket" class="hover:text-green-200 transition">Eliminatorias</NuxtLink>
             <NuxtLink to="/leaderboard" class="hover:text-green-200 transition">Clasificación</NuxtLink>
@@ -36,6 +37,7 @@
         </div>
 
         <div v-if="mobileMenuOpen && auth.isApproved" class="md:hidden mt-4 pb-2 space-y-2">
+          <NuxtLink to="/live" class="block py-2 hover:text-green-200 font-semibold text-yellow-300">En vivo</NuxtLink>
           <NuxtLink to="/groups" class="block py-2 hover:text-green-200">Fase de Grupos</NuxtLink>
           <NuxtLink to="/bracket" class="block py-2 hover:text-green-200">Eliminatorias</NuxtLink>
           <NuxtLink to="/leaderboard" class="block py-2 hover:text-green-200">Clasificación</NuxtLink>

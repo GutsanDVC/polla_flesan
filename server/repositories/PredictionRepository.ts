@@ -161,4 +161,26 @@ export class PredictionRepository {
     );
     return res.rows[0];
   }
+
+  async getUsersWithIncompletePredictions(): Promise<Array<{
+    id: string;
+    email: string;
+    full_name: string;
+    pending_matches: number;
+    predicted_pending: number;
+  }>> {
+    const res = await dbClient.query(`
+      SELECT
+        u.id, u.email, u.full_name,
+        (SELECT COUNT(*)::int FROM ${SCHEMA}.matches WHERE phase = 'GROUP' AND status = 'SCHEDULED') AS pending_matches,
+        (SELECT COUNT(*)::int FROM ${SCHEMA}.match_predictions mp
+         JOIN ${SCHEMA}.matches m ON m.id = mp.match_id
+         WHERE mp.user_id = u.id AND m.phase = 'GROUP' AND m.status = 'SCHEDULED') AS predicted_pending
+      FROM ${SCHEMA}.users u
+      WHERE u.status = 'APPROVED'
+      ORDER BY u.full_name ASC
+    `);
+
+    return res.rows.filter((row: any) => row.predicted_pending < row.pending_matches);
+  }
 }

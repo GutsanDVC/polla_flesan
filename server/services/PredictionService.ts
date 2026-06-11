@@ -37,7 +37,7 @@ export class PredictionService {
 
     if (match.phase === 'GROUP') {
       const blockDate = new Date(
-        process.env.GROUP_PHASE_LOCK_DATE || '2026-06-11T00:00:00Z',
+        process.env.GROUP_PHASE_LOCK_DATE || '2026-06-12T00:00:00Z',
       );
       if (currentDate >= blockDate) {
         throw new Error('La fase de grupos está bloqueada. No se permiten más modificaciones.');

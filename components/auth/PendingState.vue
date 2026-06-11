@@ -8,13 +8,17 @@
     <h2 class="text-xl font-semibold text-yellow-800">Cuenta creada — Pendiente de pago</h2>
     <p class="text-yellow-700">
       Hola <strong>{{ userName }}</strong>, tu cuenta fue creada correctamente.
-      Para comenzar a jugar debes transferir la cuota de incorporación y enviar el comprobante.
+      Para comenzar a jugar debes transferir la cuota de incorporación de <strong>$10.000 CLP</strong> y enviar el comprobante.
     </p>
 
     <div class="bg-white border border-yellow-300 rounded-lg p-5 text-left space-y-3 max-w-md mx-auto">
       <h3 class="font-semibold text-gray-800 text-center">Datos para la transferencia</h3>
 
       <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500">Monto:</span>
+          <span class="font-medium text-gray-800">$10.000 CLP</span>
+        </div>
         <div class="flex justify-between">
           <span class="text-gray-500">Nombre:</span>
           <span class="font-medium text-gray-800">BASTIAN EDUARDO GUTIERREZ SANCHEZ</span>

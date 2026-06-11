@@ -174,4 +174,24 @@ export class MatchRepository {
     if (res.rows.length === 0) return null;
     return this.getMatchById(matchId);
   }
+
+  async updateMatchScores(
+    matchId: number,
+    homeScore: number,
+    awayScore: number,
+  ): Promise<Match | null> {
+    const res = await dbClient.query(
+      `
+      UPDATE ${SCHEMA}.matches
+      SET
+        home_score = $1,
+        away_score = $2
+      WHERE id = $3
+      RETURNING id
+      `,
+      [homeScore, awayScore, matchId],
+    );
+    if (res.rows.length === 0) return null;
+    return this.getMatchById(matchId);
+  }
 }

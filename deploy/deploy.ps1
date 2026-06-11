@@ -172,7 +172,7 @@ if ($startStep -le 4) {
     if ($checkResult.Trim() -ne "OK") {
         Write-Host "`nError: No se encontró server/index.mjs en el servidor." -ForegroundColor Red
         Write-Host "Ejecute desde el paso 3 para subir los archivos." -ForegroundColor Red
-        exit 1
+        exit 1e
     }
 
     Write-Host "`n[4/4] Reiniciando proceso en PM2..." -ForegroundColor Yellow
@@ -188,6 +188,6 @@ if ($startStep -le 4) {
 # ----------------------------------------------
 # 9. Finalización
 # ----------------------------------------------
-Write-Host "`n=========================================" -ForegroundColor Green
+Write-Host "`=========================================" -ForegroundColor Green
 Write-Host "     DESPLIEGUE COMPLETADO CON ÉXITO" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green

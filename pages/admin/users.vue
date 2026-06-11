@@ -1,6 +1,30 @@
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-green-700">Gestión de Usuarios</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-green-700">Gestión de Usuarios</h1>
+      <button
+        @click="openIncompletePreview"
+        :disabled="loadingPreview"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-semibold transition',
+          loadingPreview
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : 'bg-orange-600 text-white hover:bg-orange-700'
+        ]"
+      >
+        {{ loadingPreview ? 'Cargando...' : '📧 Notificar incompletos' }}
+      </button>
+    </div>
+
+    <div v-if="notifyResult" :class="[
+      'px-4 py-3 rounded text-sm',
+      notifyResult.sent > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+    ]">
+      {{ notifyResult.message }}
+      <span v-if="notifyResult.total > 0" class="block text-xs mt-1 text-gray-500">
+        {{ notifyResult.total }} usuario(s) con predicciones pendientes
+      </span>
+    </div>
 
     <div v-if="loading" class="text-center py-8">
       <p class="text-gray-500">Cargando usuarios...</p>
@@ -68,6 +92,77 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Incomplete Users Preview Modal -->
+    <div v-if="previewModal.show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-lg space-y-4 max-h-[80vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-800">Usuarios con predicciones pendientes</h3>
+
+        <div v-if="previewModal.sending" class="text-center py-4">
+          <p class="text-gray-500">Enviando correos...</p>
+        </div>
+
+        <template v-else-if="previewModal.users.length > 0">
+          <p class="text-sm text-gray-600">
+            Se enviará un correo de recordatorio a <strong>{{ previewModal.users.length }}</strong> usuario(s):
+          </p>
+
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-xs text-gray-500 border-b">
+                <th class="px-3 py-2 text-left">Nombre</th>
+                <th class="px-3 py-2 text-left">Email</th>
+                <th class="px-3 py-2 text-center">Pendientes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in previewModal.users" :key="user.id" class="border-b last:border-0">
+                <td class="px-3 py-2 font-medium text-gray-700">{{ user.full_name }}</td>
+                <td class="px-3 py-2 text-gray-500">{{ user.email }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-semibold">
+                    {{ user.pending_matches - user.predicted_pending }} de {{ user.pending_matches }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+
+        <div v-else class="text-center py-4">
+          <p class="text-green-600 font-medium">Todos los usuarios tienen sus predicciones completas</p>
+        </div>
+
+        <div v-if="previewModal.result" :class="[
+          'px-3 py-2 rounded text-sm',
+          previewModal.result.sent > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+        ]">
+          {{ previewModal.result.message }}
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2">
+          <button
+            @click="previewModal.show = false"
+            class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+          >
+            Cerrar
+          </button>
+          <button
+            v-if="previewModal.users.length > 0 && !previewModal.result"
+            @click="sendFromPreview"
+            :disabled="previewModal.sending"
+            :class="[
+              'px-4 py-2 text-sm rounded font-semibold transition',
+              previewModal.sending
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
+            ]"
+          >
+            {{ previewModal.sending ? 'Enviando...' : 'Enviar correos' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Approve Modal -->
@@ -153,6 +248,15 @@ definePageMeta({ middleware: 'auth' });
 
 const users = ref<any[]>([]);
 const loading = ref(true);
+const loadingPreview = ref(false);
+const notifyResult = ref<{ sent: number; errors: number; total: number; message: string } | null>(null);
+
+const previewModal = ref({
+  show: false,
+  users: [] as any[],
+  sending: false,
+  result: null as { sent: number; errors: number; total: number; message: string } | null,
+});
 
 const approveModal = ref({
   show: false,
@@ -234,6 +338,52 @@ async function updateUserStatus(userId: string, status: string) {
     if (user) user.status = status;
   } catch (error: any) {
     alert(error?.data?.statusMessage || error?.statusMessage || error?.message || 'Error al actualizar usuario');
+  }
+}
+
+async function openIncompletePreview() {
+  loadingPreview.value = true;
+  notifyResult.value = null;
+  try {
+    const incompleteUsers = await $fetch<any[]>('/api/admin/incomplete-users');
+    previewModal.value = {
+      show: true,
+      users: incompleteUsers,
+      sending: false,
+      result: null,
+    };
+  } catch (error: any) {
+    notifyResult.value = {
+      sent: 0,
+      errors: 1,
+      total: 0,
+      message: error?.data?.statusMessage || 'Error al cargar usuarios pendientes',
+    };
+  } finally {
+    loadingPreview.value = false;
+  }
+}
+
+async function sendFromPreview() {
+  previewModal.value.sending = true;
+  try {
+    const result = await $fetch<{
+      sent: number;
+      errors: number;
+      total: number;
+      message: string;
+    }>('/api/admin/notify-incomplete', { method: 'POST' });
+    previewModal.value.result = result;
+    notifyResult.value = result;
+  } catch (error: any) {
+    previewModal.value.result = {
+      sent: 0,
+      errors: 1,
+      total: 0,
+      message: error?.data?.statusMessage || 'Error al enviar notificaciones',
+    };
+  } finally {
+    previewModal.value.sending = false;
   }
 }
 
