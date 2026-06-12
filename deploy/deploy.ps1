@@ -26,6 +26,10 @@ Get-Content $envFile | ForEach-Object {
 $PROJECT_NAME = $Env:PROJECT_NAME
 $REMOTE_BASE_DIR = if ($Env:REMOTE_BASE_DIR) { $Env:REMOTE_BASE_DIR } else { "/var/www/one" }
 
+# Forzar CWD al directorio raíz del proyecto
+$projectRoot = Split-Path $PSScriptRoot -Parent
+Set-Location $projectRoot
+
 # ----------------------------------------------
 # 2. Selección de Entorno
 # ----------------------------------------------
@@ -82,7 +86,10 @@ if ($startStepInput -match "^[1-4]$") {
 }
 
 # Variables compartidas
-$LOCAL_OUTPUT = Join-Path (Split-Path $PSScriptRoot -Parent) ".output"
+$LOCAL_OUTPUT = Join-Path (Get-Location) ".output"
+if (!(Test-Path $LOCAL_OUTPUT)) {
+    $LOCAL_OUTPUT = Join-Path $PSScriptRoot "..\.output"
+}
 $REMOTE_PATH = "$REMOTE_BASE_DIR/$PROJECT_NAME"
 
 # ----------------------------------------------
@@ -172,11 +179,11 @@ if ($startStep -le 4) {
     if ($checkResult.Trim() -ne "OK") {
         Write-Host "`nError: No se encontró server/index.mjs en el servidor." -ForegroundColor Red
         Write-Host "Ejecute desde el paso 3 para subir los archivos." -ForegroundColor Red
-        exit 1e
+        exit 1
     }
 
     Write-Host "`n[4/4] Reiniciando proceso en PM2..." -ForegroundColor Yellow
-    $pm2Cmd = "cd $REMOTE_PATH && pm2 delete $PROJECT_NAME --silent || true && pm2 start .ecosystem.config.js"
+    $pm2Cmd = "cd $REMOTE_PATH && pm2 delete $PROJECT_NAME --silent || true && /usr/local/bin/node20 $(which pm2) start ecosystem.config.js --only polla_flesan"
     plink -ssh -batch "$USERNAME@${SERVER}" -pw "$PASSWORD" $pm2Cmd
 
     if ($LASTEXITCODE -ne 0) {
