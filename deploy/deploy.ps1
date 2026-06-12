@@ -86,10 +86,7 @@ if ($startStepInput -match "^[1-4]$") {
 }
 
 # Variables compartidas
-$LOCAL_OUTPUT = Join-Path (Get-Location) ".output"
-if (!(Test-Path $LOCAL_OUTPUT)) {
-    $LOCAL_OUTPUT = Join-Path $PSScriptRoot "..\.output"
-}
+$LOCAL_OUTPUT = Join-Path $projectRoot ".output"
 $REMOTE_PATH = "$REMOTE_BASE_DIR/$PROJECT_NAME"
 
 # ----------------------------------------------
