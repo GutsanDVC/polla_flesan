@@ -49,6 +49,13 @@ else {
     Write-Host "Opción inválida." -ForegroundColor Red; exit 1
 }
 
+# Validar credenciales SSH
+if ([string]::IsNullOrEmpty($SERVER) -or [string]::IsNullOrEmpty($USERNAME) -or [string]::IsNullOrEmpty($PASSWORD)) {
+    Write-Host "`nError: Credenciales SSH incompletas." -ForegroundColor Red
+    Write-Host "Verifique HOST, USER y PASS en deploy/.env para el entorno seleccionado." -ForegroundColor Red
+    exit 1
+}
+
 # ----------------------------------------------
 # 3. Selección de Acción
 # ----------------------------------------------
@@ -141,6 +148,7 @@ if ($startStep -le 2) {
 # ----------------------------------------------
 if ($startStep -le 3) {
     # Validación de precondición: .output debe existir localmente
+    Write-Host "Ruta local: $LOCAL_OUTPUT"
     if (!(Test-Path $LOCAL_OUTPUT)) {
         Write-Host "`nError: No se encontró .output/ local." -ForegroundColor Red
         Write-Host "Ejecute desde el paso 1 para generar el build." -ForegroundColor Red
